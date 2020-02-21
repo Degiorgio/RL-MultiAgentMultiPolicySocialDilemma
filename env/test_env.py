@@ -56,14 +56,16 @@ class Gathering(arcade.Window):
             self.env.render()
         elif key == arcade.key.SPACE:
             action = SHOOT
+        elif key == arcade.key.HOME:
+            action2 = SHOOT
         if action is not None:
             try:
                 state, reward, done = self.env.step([action, action2])
             except Exception as e:
                 print(e)
                 import ipdb; ipdb.set_trace()
-            # print(f"Player locations {self.env.players}")
-            # print(f"Action rewards {reward}")
+            print(f"Player locations {self.env.players}")
+            print(f"Action rewards {reward}")
         self.acted = True
 
     def on_draw(self):

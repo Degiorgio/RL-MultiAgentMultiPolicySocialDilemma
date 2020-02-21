@@ -48,13 +48,13 @@ class Player(Blob):
 
     def __str__(self):
         return \
-            f"Player {self.pid}: loc: ({self.x}, {self.y}),\
-            dead: {self.dead}, facing_dir: {self.facing_dir % 4}"
+            f"Player {self.pid}: loc: ({self.x}, {self.y})"\
+            f" dead: {self.dead}, facing_dir: {self.facing_dir % 4}"
 
     def __repr__(self):
         return \
-            f"Player {self.pid}: loc: ({self.x}, {self.y}), dead:\
-            {self.dead}, facing_dir: {self.facing_dir % 4}"
+            f"Player {self.pid}: loc: ({self.x}, {self.y}), dead:"\
+            f" {self.dead}, facing_dir: {self.facing_dir % 4}"
 
 
 class BlobEnv:
