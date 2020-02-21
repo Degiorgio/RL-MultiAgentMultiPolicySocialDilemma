@@ -6,13 +6,19 @@ import collections
 
 Point = collections.namedtuple('Point', 'x y')
 
+FOOD_TINY = 1
+FOOD_LITTLE = 2
+FOOD_NORMAL = 4
+FOOD_ALOT = 7
+
 
 class Apple(Blob):
     def __init__(self, size, x=None, y=None):
+        super(Apple, self).__init__(size, x, y)
+
         self.collected = False
         self.collected_time = None
-        self.color = (0, 255, 0)  # green
-        super(Apple, self).__init__(size, x, y)
+        self.color = (0, 255, 0)
 
     def collect(self, step):
         self.collected = True
@@ -24,32 +30,62 @@ class Apple(Blob):
 
 
 class Player(Blob):
-    def __init__(self, size, color, x=None, y=None):
+    def __init__(self, pid, size, color, x=None, y=None, facing_dir=None):
+        super(Player, self).__init__(size, x, y, facing_dir)
+        self.pid = pid
         self.dead = False
         self.time_of_death = None
         self.color = color
-        super(Player, self).__init__(size, x, y)
 
     def died(self, step):
         self.dead = True
         self.time_of_death = step
 
+    def respawn(self):
+        self.dead = False
+        self.time_of_death = None
+        self.relocate()
+
+    def __str__(self):
+        return \
+            f"Player {self.pid}: loc: ({self.x}, {self.y}),\
+            dead: {self.dead}, facing_dir: {self.facing_dir % 4}"
+
+    def __repr__(self):
+        return \
+            f"Player {self.pid}: loc: ({self.x}, {self.y}), dead:\
+            {self.dead}, facing_dir: {self.facing_dir % 4}"
+
 
 class BlobEnv:
-    def __init__(self, size=20, return_images=True, max_steps=200):
+    def __init__(self,
+                 size=20,
+                 return_images=True,
+                 max_steps=1000,
+                 player_respawn_time=5,
+                 player_murder_mode=True,
+                 food_respawn_time=20,
+                 food_level=FOOD_NORMAL,
+                 draw_shooting_direction=True,
+                 logger=None):
         self.size = size
         self.return_images = return_images
         self.max_steps = max_steps
 
-        self.player_move_cost = 1
-
-        self.food_respawn_time = 3
-        self.food_reward = 25
-
         self.players = None
-        self.food = None
+        self.player_move_cost = 1
+        self.murder_mode = player_murder_mode
+        self.player_respawn_time = player_respawn_time
+        self.draw_shooting_direction = draw_shooting_direction
 
-    def generate_food(self, size=3, start=np.array([0, 0])):
+        self.food = None
+        self.food_level = food_level
+        self.food_respawn_time = food_respawn_time
+        self.food_reward = 25
+        self.logger = None
+
+    def generate_food(self, start=np.array([0, 0])):
+        size = self.food_level
         tl = size * 2 - 1
         top = start + tl - 1
         for idx in range(size - 1):
@@ -64,9 +100,9 @@ class BlobEnv:
                 self.food.append(Apple(size=self.size, x=row, y=col))
 
     def _add_player(self, color):
-        player = Player(self.size, color=color)
+        player = Player(len(self.players), self.size, color=color, facing_dir=0)
         while player in self.food or player in self.players:
-            player = Player(self.size, color=color)
+            player = Player(len(self.players), self.size, color=color, facing_dir=0)
         self.players.append(player)
 
     def reset(self, num_players=2):
@@ -104,6 +140,29 @@ class BlobEnv:
             else:
                 rewards[player_index] += -self.player_move_cost
 
+            if self.murder_mode and player.beam:
+                if self.logger is not None:
+                    self.logger.info(f"player: {player} shooting")
+                player.beam = False
+                for player2 in self.players:
+                    if player.pid == player2.pid:
+                        continue
+                    if player2.hit_by(player):
+                        if self.logger is not None:
+                            self.logger.info(
+                                f"[{player2}] was hit by [{player}]")
+                        player2.died(self.episode_step)
+
+        if self.murder_mode:
+            # respawn players if appropriate
+            for player in self.players:
+                if player.dead:
+                    elapsed_time = self.episode_step - player.time_of_death
+                    if elapsed_time >= self.player_respawn_time:
+                        player.respawn()
+                        while player in self.food:
+                            player.respawn()
+
         # re-spawn food if appropriate
         for apple in self.food:
             if apple.collected:
@@ -139,14 +198,22 @@ class BlobEnv:
                 return True
         return False
 
-    def contains_player(self, x, y, player):
+    def contains_player(self, x, y, pid):
         point = Point(x=x, y=y)
         if point in self.players:
             pindex = self.players.index(point)
-            if pindex == player-1 and not self.players[pindex].dead:
+            if pindex == (pid-1) and not self.players[pindex].dead:
                 return True
         else:
             return False
+
+    def contains_player_direction(self, x, y):
+        for player in self.players:
+            if not player.dead:
+                direction = player.get_facing()
+                if x == direction[0] and direction[1] == y:
+                    return True
+        return False
 
     def get_image(self):
         # starts an rbg of our size
@@ -161,6 +228,9 @@ class BlobEnv:
         for player in self.players:
             if not player.dead:
                 env[player.x][player.y] = player.color
+                if self.murder_mode and self.draw_shooting_direction:
+                    facing = player.get_facing()
+                    env[facing[0]][facing[1]] = (128,128,128)
 
         # reading to rgb. Apparently. Even tho color definitions are bgr. ???
         img = Image.fromarray(env, 'RGB')

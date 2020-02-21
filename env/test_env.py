@@ -1,6 +1,6 @@
 import arcade
 from gridworld import BlobEnv
-from blob import UP, DOWN, LEFT, RIGHT, NOTHING
+from blob import UP, DOWN, LEFT, RIGHT, NOTHING, ROTATE_LEFT, ROTATE_RIGHT, SHOOT
 
 GRID_WORLD_SIZE = 20
 WIDTH = GRID_WORLD_SIZE
@@ -14,7 +14,7 @@ class Gathering(arcade.Window):
     def __init__(self):
         self.env = BlobEnv(size=20)
         self.set_update_rate(1 / 10)
-        self.total_reward = 0
+        self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)
 
     def setup(self):
@@ -38,6 +38,10 @@ class Gathering(arcade.Window):
             action = RIGHT
         elif key == arcade.key.LEFT:
             action = LEFT
+        elif key == arcade.key.Q:
+            action = ROTATE_LEFT
+        elif key == arcade.key.E:
+            action = ROTATE_RIGHT
         elif key == arcade.key.W:
             action2 = UP
         elif key == arcade.key.S:
@@ -50,10 +54,17 @@ class Gathering(arcade.Window):
             action = NOTHING
         elif key == arcade.key.ENTER:
             self.env.render()
+        elif key == arcade.key.SPACE:
+            action = SHOOT
         if action is not None:
-            state, reward, done = self.env.step([action, action2])
-            print(f"Player locations {self.env.players}")
-            print(f"Action rewards {reward}")
+            try:
+                state, reward, done = self.env.step([action, action2])
+            except Exception as e:
+                print(e)
+                import ipdb; ipdb.set_trace()
+            # print(f"Player locations {self.env.players}")
+            # print(f"Action rewards {reward}")
+        self.acted = True
 
     def on_draw(self):
         """
@@ -62,6 +73,8 @@ class Gathering(arcade.Window):
         arcade.start_render()
         for row in range(GRID_WORLD_SIZE):
             for column in range(GRID_WORLD_SIZE):
+                x = (MARGIN + WIDTH) * column + MARGIN + WIDTH // 2
+                y = (MARGIN + HEIGHT) * row + MARGIN + HEIGHT // 2
                 # figure out what color to draw the box
                 if self.env.contains_food(row, column):
                     color = arcade.color.GREEN
@@ -69,10 +82,10 @@ class Gathering(arcade.Window):
                     color = arcade.color.BLUE
                 elif self.env.contains_player(row, column, 2):
                     color = arcade.color.RED
+                elif self.env.contains_player_direction(row, column):
+                    color = arcade.color.GRAY
                 else:
                     color = arcade.color.BLACK
-                x = (MARGIN + WIDTH) * column + MARGIN + WIDTH // 2
-                y = (MARGIN + HEIGHT) * row + MARGIN + HEIGHT // 2
                 arcade.draw_rectangle_filled(x, y, WIDTH, HEIGHT, color)
 
 def main():
