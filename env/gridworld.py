@@ -84,6 +84,12 @@ class BlobEnv:
         self.food_reward = 25
         self.logger = None
 
+    def get_n_actions(self):
+        if self.murder_mode:
+            return 4
+        else:
+            return 5
+
     def generate_food(self, start=np.array([0, 0])):
         size = self.food_level
         tl = size * 2 - 1
@@ -230,7 +236,7 @@ class BlobEnv:
                 env[player.x][player.y] = player.color
                 if self.murder_mode and self.draw_shooting_direction:
                     facing = player.get_facing()
-                    env[facing[0]][facing[1]] = (128,128,128)
+                    env[facing[0]][facing[1]] = (128, 128, 128)
 
         # reading to rgb. Apparently. Even tho color definitions are bgr. ???
         img = Image.fromarray(env, 'RGB')

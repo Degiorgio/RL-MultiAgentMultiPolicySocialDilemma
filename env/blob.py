@@ -16,6 +16,7 @@ EAST = 1
 SOUTH = 2
 WEST = 3
 
+
 class Blob:
     def __init__(self, size, x=None, y=None, facing_dir=None):
         self.size = size
@@ -56,7 +57,7 @@ class Blob:
     # (x=0, y=0)=top left
     def action(self, choice):
         if choice == UP:
-            # move up 
+            # move up
             self.move(x=1, y=0)
             # self.move(x=0, y=-1)
         elif choice == DOWN:
