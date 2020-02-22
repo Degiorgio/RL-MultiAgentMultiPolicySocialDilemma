@@ -6,6 +6,8 @@ DOWN = 1
 LEFT = 2
 RIGHT = 3
 NOTHING = 4
+
+# murder mode only
 ROTATE_LEFT = 5
 ROTATE_RIGHT = 6
 SHOOT = 7

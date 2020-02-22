@@ -1,6 +1,9 @@
 import arcade
-from gridworld import BlobEnv
-from blob import UP, DOWN, LEFT, RIGHT, NOTHING, ROTATE_LEFT, ROTATE_RIGHT, SHOOT
+from env.gridworld import BlobEnv
+
+# actions
+from env.blob import UP, DOWN, LEFT, RIGHT, NOTHING
+from env.blob import ROTATE_LEFT, ROTATE_RIGHT, SHOOT
 
 GRID_WORLD_SIZE = 20
 WIDTH = GRID_WORLD_SIZE
@@ -9,16 +12,22 @@ MARGIN = 1
 SCREEN_WIDTH = (WIDTH + MARGIN) * GRID_WORLD_SIZE + MARGIN
 SCREEN_HEIGHT = (HEIGHT + MARGIN) * GRID_WORLD_SIZE + MARGIN
 
+NUM_PLAYERS = 1
+
 
 class Gathering(arcade.Window):
     def __init__(self):
-        self.env = BlobEnv(size=20)
+        if NUM_PLAYERS == 1:
+            self.env = BlobEnv(size=20, player_murder_mode=False)
+        else:
+            self.env = BlobEnv(size=20, murder_mode=True)
+
         self.set_update_rate(1 / 10)
         self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)
 
     def setup(self):
-        self.env.reset(num_players=2)
+        self.env.reset(num_players=NUM_PLAYERS)
         print(self.env.players)
 
     def update(self, dt):
@@ -60,7 +69,10 @@ class Gathering(arcade.Window):
             action2 = SHOOT
         if action is not None:
             try:
-                state, reward, done = self.env.step([action, action2])
+                if NUM_PLAYERS == 2:
+                    state, reward, done = self.env.step([action, action2])
+                else:
+                    state, reward, done = self.env.step([action])
             except Exception as e:
                 print(e)
                 import ipdb; ipdb.set_trace()
@@ -89,6 +101,7 @@ class Gathering(arcade.Window):
                 else:
                     color = arcade.color.BLACK
                 arcade.draw_rectangle_filled(x, y, WIDTH, HEIGHT, color)
+
 
 def main():
     window = Gathering()

@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from PIL import Image
-from blob import Blob
+from env.blob import Blob
 import collections
 
 Point = collections.namedtuple('Point', 'x y')
@@ -67,7 +67,7 @@ class BlobEnv:
                  food_respawn_time=20,
                  food_level=FOOD_NORMAL,
                  draw_shooting_direction=True,
-                 logger=None):
+                 logger_callback=None):
         self.size = size
         self.return_images = return_images
         self.max_steps = max_steps
@@ -82,13 +82,30 @@ class BlobEnv:
         self.food_level = food_level
         self.food_respawn_time = food_respawn_time
         self.food_reward = 25
-        self.logger = None
+        self.logger_callback = logger_callback
+
+        if self.logger_callback is not None:
+            self.logger_callback(
+                f"Env HP: size: {size}, max_steps: {self.max_steps}, draw_shooting_direction: {draw_shooting_direction}, num_actions: {self.get_n_actions()}")
+            self.logger_callback(
+                f"Reward HP: player_move_cost: {self.player_move_cost}, food_reward: {self.food_reward}")
+            self.logger_callback(
+                f"Food HP: food_level: {self.food_level}, food_respawn_time: {self.food_respawn_time}")
+            self.logger_callback(
+                f"Player HP: player_respawn_time: {self.player_respawn_time}, player_murder_mode: {self.murder_mode}")
 
     def get_n_actions(self):
         if self.murder_mode:
-            return 4
+            return 8
         else:
             return 5
+
+    def get_observation_space(self):
+        if self.return_images:
+            return (self.size, self.size, 3)
+        else:
+            raise NotImplementedError("only images supported")
+
 
     def generate_food(self, start=np.array([0, 0])):
         size = self.food_level
@@ -147,15 +164,15 @@ class BlobEnv:
                 rewards[player_index] += -self.player_move_cost
 
             if self.murder_mode and player.beam:
-                if self.logger is not None:
-                    self.logger.info(f"player: {player} shooting")
+                if self.logger_callback is not None:
+                    self.logger_callback(f"player: {player} shooting")
                 player.beam = False
                 for player2 in self.players:
                     if player.pid == player2.pid:
                         continue
                     if player2.hit_by(player):
-                        if self.logger is not None:
-                            self.logger.info(
+                        if self.logger_callback is not None:
+                            self.logger_callback(
                                 f"[{player2}] was hit by [{player}]")
                         player2.died(self.episode_step)
 
@@ -179,6 +196,8 @@ class BlobEnv:
         # compute new_observation
         if self.return_images:
             new_observation = np.array(self.get_image())
+        else:
+            raise NotImplementedError("only images supported")
 
         # check if game is finished
         done = False
@@ -214,11 +233,12 @@ class BlobEnv:
             return False
 
     def contains_player_direction(self, x, y):
-        for player in self.players:
-            if not player.dead:
-                direction = player.get_facing()
-                if x == direction[0] and direction[1] == y:
-                    return True
+        if self.murder_mode and self.draw_shooting_direction:
+            for player in self.players:
+                if not player.dead:
+                    direction = player.get_facing()
+                    if x == direction[0] and direction[1] == y:
+                        return True
         return False
 
     def get_image(self):
