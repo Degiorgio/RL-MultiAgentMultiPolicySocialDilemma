@@ -1,3 +1,24 @@
+import time
+
+
+class MyTimer():
+    def __init__(self, label, aprint=True):
+        self.aprint = aprint
+        self.label = label
+        self.start = time.time()
+
+    def __enter__(self):
+        return self
+
+    def get_runtime(self):
+        end = time.time()
+        return end - self.start
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        runtime = self.get_runtime()
+        if self.aprint:
+            msg = f'{self.label} took {runtime} seconds to complete'
+            print(msg)
 
 
 def __thread_report_log(param):
@@ -39,7 +60,7 @@ def setup_log(log_path):
 
 
 def get_stats_file(path):
-    file = open(path, "w+")
+    file = open(path, "w")
     file.write(f"episode,avg_reward,min_reward,max_reward,epsilon\n")
     return file
 
@@ -47,5 +68,3 @@ def get_stats_file(path):
 def get_run_id():
     import time
     return "%s" % (time.strftime("%Y-%m-%d-%H-%M-%S"))
-
-

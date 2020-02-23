@@ -49,17 +49,18 @@ class agent_wrapper:
 
         self.episode_reward = 0
 
-    def do_step(self, step, reward, current_state, action, new_state, done):
+    def do_step(self, reward, current_state, action, new_state, done):
         self.episode_reward += reward
-        self.agent.do_step(
-            step, current_state, action, reward, new_state, done)
+        self.agent.update_replay_memory(
+            (current_state, action, reward, new_state, done)
+        )
+        self.agent.train(done)
 
     def write_stats(self, episode, EVERY, cb):
         span = self.episode_rewards[-EVERY:]
         average_reward = sum(span)/len(span)
         min_reward = min(span)
         max_reward = max(span)
-
         cb(self.stats_file, episode,
            average_reward, min_reward, max_reward,
            self.epsilon)

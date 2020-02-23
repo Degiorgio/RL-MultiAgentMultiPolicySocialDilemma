@@ -39,7 +39,7 @@ class DQNAgent:
         self.replay_memory.append(transition)
 
     # Trains main network every step during episode
-    def train(self, terminal_state, step):
+    def train(self, terminal_state: bool):
 
         # Start training only if certain number of samples is already saved
         if len(self.replay_memory) < self.MIN_REPLAY_MEMORY_SIZE:
@@ -101,10 +101,3 @@ class DQNAgent:
     # (environment state)
     def get_qs(self, state):
         return self.model.predict(np.array(state).reshape(-1, *state.shape)/255)[0]
-
-    # Every step we update replay memory and train main network
-    def do_step(self, step, current_state, action, reward, new_state, done):
-        self.update_replay_memory(
-            (current_state, action, reward, new_state, done)
-        )
-        self.train(done, step)

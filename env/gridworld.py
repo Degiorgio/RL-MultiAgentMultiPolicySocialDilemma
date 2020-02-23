@@ -146,7 +146,6 @@ class BlobEnv:
 
         if self.return_images:
             observation = np.array(self.get_image())
-
         return observation
 
     def step(self, actions):
@@ -207,6 +206,7 @@ class BlobEnv:
         return new_observation, rewards, done
 
     def render(self, wait=True):
+        print("env rendering")
         img = self.get_image()
         # resizing so we can see
         img = img.resize((300, 300))
