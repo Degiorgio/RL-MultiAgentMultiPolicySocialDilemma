@@ -57,33 +57,55 @@ class Blob:
     # (x=SIZE,y=SIZE)=bottom rigth
     # and
     # (x=0, y=0)=top left
-    def action(self, choice):
-        if choice == UP:
-            # move up
-            self.move(x=1, y=0)
-            # self.move(x=0, y=-1)
-        elif choice == DOWN:
-            #  move down
-            self.move(x=-1, y=0)
-            # self.move(x=0, y=1)
-        elif choice == LEFT:
-            # move left
-            # self.move(x=-1, y=0)
-            self.move(x=0, y=-1)
-        elif choice == RIGHT:
-            # move right
-            # self.move(x=1, y=0)
-            self.move(x=0, y=1)
-        elif choice == ROTATE_LEFT:
-            self.facing_dir += 1
-        elif choice == ROTATE_RIGHT:
-            self.facing_dir -= 1
-        elif choice == SHOOT:
-            self.beam = True
-        elif choice == NOTHING:
-            return
+    def action(self, choice, murder_mode):
+        if not murder_mode:
+            if choice == UP:
+                # move up
+                self.move(x=1, y=0)
+                # self.move(x=0, y=-1)
+            elif choice == DOWN:
+                #  move down
+                self.move(x=-1, y=0)
+                # self.move(x=0, y=1)
+            elif choice == LEFT:
+                # move left
+                # self.move(x=-1, y=0)
+                self.move(x=0, y=-1)
+            elif choice == RIGHT:
+                # move right
+                # self.move(x=1, y=0)
+                self.move(x=0, y=1)
+            elif choice == NOTHING:
+                return
+            else:
+                raise NotImplementedError(f"action {choice} not supported")
         else:
-            raise NotImplementedError(f"action {choice} not supported")
+            if choice == UP:
+                # move up
+                self.move(x=1, y=0)
+                # self.move(x=0, y=-1)
+            elif choice == DOWN:
+                #  move down
+                self.move(x=-1, y=0)
+                # self.move(x=0, y=1)
+            elif choice == LEFT:
+                # move left
+                # self.move(x=-1, y=0)
+                self.move(x=0, y=-1)
+            elif choice == RIGHT:
+                # move right
+                # self.move(x=1, y=0)
+                self.move(x=0, y=1)
+            elif choice == ROTATE_LEFT:
+                self.facing_dir += 1
+            elif choice == ROTATE_RIGHT:
+                self.facing_dir -= 1
+            elif choice == SHOOT:
+                self.beam = True
+            elif choice == NOTHING:
+                return
+            else:
+                raise NotImplementedError(f"action {choice} not supported")
 
     def move(self, x=None, y=None):
         # if no value for x, move randomly

@@ -5,7 +5,7 @@ from env.gridworld import GatheringEnv
 from env.blob import UP, DOWN, LEFT, RIGHT, NOTHING
 from env.blob import ROTATE_LEFT, ROTATE_RIGHT, SHOOT
 
-GRID_WORLD_SIZE = 20
+GRID_WORLD_SIZE = 42
 WIDTH = GRID_WORLD_SIZE
 HEIGHT = GRID_WORLD_SIZE
 MARGIN = 1
@@ -18,13 +18,13 @@ NUM_PLAYERS = 2
 class Gathering(arcade.Window):
     def __init__(self):
         if NUM_PLAYERS == 1:
-            self.env = GatheringEnv(size=20,
+            self.env = GatheringEnv(size=GRID_WORLD_SIZE,
                                     num_players=NUM_PLAYERS,
                                     player_murder_mode=False)
         else:
-            self.env = GatheringEnv(size=20,
+            self.env = GatheringEnv(size=GRID_WORLD_SIZE,
                                     num_players=NUM_PLAYERS,
-                                    player_move_cost=True)
+                                    player_murder_mode=False)
         self.set_update_rate(1 / 10)
         self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -75,9 +75,9 @@ class Gathering(arcade.Window):
         if action is not None:
             try:
                 if NUM_PLAYERS == 2:
-                    states, rewards, done, info = self.env.step([action, action2])
+                    states, rewards, done, info = self.env.step({"player0":action, "player1":action2})
                 else:
-                    states, rewards, done, info = self.env.step([action])
+                    states, rewards, done, info = self.env.step({"player0":action})
             except Exception as e:
                 import traceback
                 traceback.print_exception(e)

@@ -3,7 +3,7 @@ import cv2
 from PIL import Image
 from env.blob import Blob
 import collections
-import gym
+from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 
 Point = collections.namedtuple('Point', 'x y')
@@ -59,8 +59,8 @@ class Player(Blob):
             f" {self.dead}, facing_dir: {self.facing_dir % 4}"
 
 
-class GatheringEnv(gym.Env):
-    metadata = {'render.modes': ['human']}
+class GatheringEnv(MultiAgentEnv):
+    metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self,
                  size=20,
@@ -72,8 +72,7 @@ class GatheringEnv(gym.Env):
                  food_reward=25,
                  food_respawn_time=20,
                  food_level=FOOD_NORMAL,
-                 draw_shooting_direction=True,
-                 logger_callback=None):
+                 draw_shooting_direction=True):
 
         self.size = size
         self.max_steps = max_steps
@@ -89,21 +88,10 @@ class GatheringEnv(gym.Env):
         self.food_level = food_level
         self.food_respawn_time = food_respawn_time
         self.food_reward = food_reward
-        self.logger_callback = logger_callback
 
         # GYM stuff
         self.action_space = Discrete(self._get_action_space())
         self.observation_space = Box(0, 255, [size, size, 3])
-
-        if self.logger_callback is not None:
-            self.logger_callback(
-                f"Env HP: size: {size}, max_steps: {self.max_steps}, draw_shooting_direction: {draw_shooting_direction}, num_actions: {self.action_space()}")
-            self.logger_callback(
-                f"Reward HP: player_move_cost: {self.player_move_cost}, food_reward: {self.food_reward}")
-            self.logger_callback(
-                f"Food HP: food_level: {self.food_level}, food_respawn_time: {self.food_respawn_time}")
-            self.logger_callback(
-                f"Player HP: player_respawn_time: {self.player_respawn_time}, player_murder_mode: {self.murder_mode}")
 
     def reset(self):
         self.players = []
@@ -121,20 +109,18 @@ class GatheringEnv(gym.Env):
         elif self.num_players != 1:
             raise NotImplementedError("only 1-2 players supported")
 
-        observations = []
+        observations = {}
         observation = np.array(self._get_image())
-        for player in self.players:
-            observations.append(observation.copy())
-
+        for i, player in enumerate(self.players):
+            observations["player"+str(i)] = observation.copy()
         return observations
 
     def step(self, actions):
         assert(len(actions) == len(self.players))
         self.episode_step += 1
-
         rewards = [0 for x in range(len(self.players))]
         for player_index, player in enumerate(self.players):
-            player.action(actions[player_index])
+            player.action(actions[f"player{player_index}"], self.murder_mode)
             if player in self.food:
                 food_index = self.food.index(player)
                 self.food[food_index].collect(self.episode_step)
@@ -143,17 +129,14 @@ class GatheringEnv(gym.Env):
                 rewards[player_index] += -self.player_move_cost
 
             if self.murder_mode and player.beam:
-                if self.logger_callback is not None:
-                    self.logger_callback(f"player: {player} shooting")
                 player.beam = False
                 for player2 in self.players:
                     if player.pid == player2.pid:
                         continue
                     if player2.hit_by(player):
-                        if self.logger_callback is not None:
-                            self.logger_callback(
-                                f"[{player2}] was hit by [{player}]")
                         player2.died(self.episode_step)
+
+        rewards = {f"player{i}": reward for i, reward in enumerate(rewards)}
 
         if self.murder_mode:
             # respawn players if appropriate
@@ -173,28 +156,31 @@ class GatheringEnv(gym.Env):
                     apple.respawn()
 
         # compute new_observation
-        new_observations = []
+        new_observations = {}
         new_observation = np.array(self._get_image())
-        for player in self.players:
-            new_observations.append(new_observation.copy())
+        for i, player in enumerate(self.players):
+            new_observations["player"+str(i)] = new_observation.copy()
 
         # check if game is finished
-        done = False
-        if self.episode_step >= self.max_steps:
-            done = True
-
+        done = {
+            "__all__": self.episode_step >= self.max_steps
+        }
         return new_observations, rewards, done, {}
 
     def render(self, mode="human", close=False):
-        if mode != "human":
-            raise Exception("unsupported render mode: " + mode)
-        if close:
-            cv2.destroyAllWindows()
-        else:
+        if mode == 'rgb_array':
             img = self._get_image()
-            img = img.resize((300, 300))
-            cv2.imshow("image", np.array(img))
-            cv2.waitKey(0)
+            return img
+        elif mode == "human":
+            if close:
+                cv2.destroyAllWindows()
+            else:
+                img = self._get_image()
+                cv2.imshow("image", np.array(img))
+                cv2.waitKey(0)
+        else:
+            raise Exception("unsupported render mode: " + mode)
+
 
     def _get_action_space(self):
         if self.murder_mode:
