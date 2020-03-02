@@ -19,6 +19,18 @@ SOUTH = 2
 WEST = 3
 
 
+action_string_map = {
+    0: "move_up",
+    1: "move_down",
+    2: "move_left",
+    3: "move_right",
+    4: "nothing",
+    5: "rotate_left",
+    6: "rotate_right",
+    7: "shoot"
+}
+
+
 class Blob:
     def __init__(self, size, x=None, y=None, facing_dir=None):
         self.size = size

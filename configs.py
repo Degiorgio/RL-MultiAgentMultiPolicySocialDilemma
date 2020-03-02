@@ -1,120 +1,138 @@
-from ray.rllib.agents.dqn.apex import ApexTrainer
-from ray.rllib.agents.dqn.dqn import DQNTrainer
+import os
+import ray
+import ray.rllib
+from ray.tune.registry import register_env
+from ray.tune.logger import UnifiedLogger
 
+from ray.rllib.agents.dqn.dqn import DQNTrainer
 from ray.rllib.agents.dqn.dqn_policy import DQNTFPolicy
 
+from util import create_dir
 
-def policy_mapping_fn(agent_id):
-    if agent_id == "player0":
-        return "0"
-    elif agent_id == "player1":
-        return "1"
+DEFAULT_RESULTS_DIR = "out"
+
+
+def _get_tf(pol):
+    if pol == "DQN":
+        return DQNTFPolicy
     else:
-        raise Exception("invalid id")
+        raise Exception("not supported")
 
 
-def get_agent_policies(murder_mode):
+def _get_trainer_constructor(pol):
+    if pol == "DQN":
+        return DQNTrainer
+    else:
+        raise Exception("not supported")
+
+
+def env_creator(env_config):
     from env.gridworld import GatheringEnv
-    single_env = GatheringEnv(size=42,
-                              num_players=2,
-                              player_murder_mode=murder_mode)
-    obs_space = single_env.observation_space
-    act_space = single_env.action_space
-    print(single_env.action_space)
-    policies = {
-        "0": (DQNTFPolicy, obs_space, act_space, {}),
-        "1": (DQNTFPolicy, obs_space, act_space, {}),
+    env = GatheringEnv(size=env_config['size'],
+                       num_players=env_config['num_players'],
+                       max_steps=env_config['steps_per_episode'],
+                       player_move_cost=env_config['player_move_cost'],
+                       player_respawn_time=env_config['player_respawn_time'],
+                       player_murder_mode=env_config['murder_mode'],
+                       food_reward=env_config['food_reward'],
+                       food_respawn_time=env_config['food_respawn_time'],
+                       food_level=env_config['food_level'])
+    return env
+
+
+def get_player_trainers(evaluate, experiment_configs):
+    def policy_mapping_fn(agent_id):
+        if agent_id == "player0":
+            return "0"
+        elif agent_id == "player1":
+            return "1"
+        else:
+            raise Exception("invalid id")
+
+    def get_agent_policies(env_config, agent0_alg, agent1_alg):
+        single_env = env_creator(env_config)
+        obs_space = single_env.observation_space
+        act_space = single_env.action_space
+        print(single_env.action_space)
+        policies = {
+            "0": (_get_tf(agent0_alg), obs_space, act_space, {}),
+            "1": (_get_tf(agent1_alg), obs_space, act_space, {}),
+        }
+        return policies, policy_mapping_fn
+
+    ray.init()
+    register_env("gathering", env_creator)
+
+    EXPERIMENT_PATH = os.path.join(DEFAULT_RESULTS_DIR, experiment_configs['rid'])
+    if not evaluate:
+        create_dir(EXPERIMENT_PATH, clean=True)
+        import json
+        with open(os.path.join(EXPERIMENT_PATH, "experiment.json"), 'w') as fp:
+            json.dump(experiment_configs, fp, indent=4)
+
+    env_config = experiment_configs['env_configs']
+
+    agent0_constructor = _get_trainer_constructor(experiment_configs['agent0_alg'])
+    agent1_constructor = _get_trainer_constructor(experiment_configs['agent1_alg'])
+    policies, policy_mapping = \
+        get_agent_policies(
+            env_config,
+            experiment_configs['agent0_alg'],
+            experiment_configs['agent1_alg']
+        )
+
+
+    agent0_default_config = {
+        "env_config": env_config,
+        "num_gpus": 0.5,
+        "multiagent": {
+            "policies": policies,
+            "policy_mapping_fn": policy_mapping,
+            "policies_to_train": ["0"]
+        }
     }
-    return policies, policy_mapping_fn
 
-def get_player_trainers_apex(evaluate, murder_mode):
-    policies, policy_mapping = get_agent_policies(murder_mode)
-    dqn_trainer1 = ApexTrainer(
+    agent1_default_config = {
+        "env_config": env_config,
+        "num_gpus": 0.5,
+        "multiagent": {
+            "policies": policies,
+            "policy_mapping_fn": policy_mapping,
+            "policies_to_train": ["1"]
+        }
+    }
+
+    agent0_configs = \
+        {**agent0_default_config, **experiment_configs['agent0_configs']}
+    agent1_configs = \
+        {**agent1_default_config, **experiment_configs['agent1_configs']}
+
+    if evaluate:
+        logger_creator = None
+    else:
+        def default_logger_creator(config):
+            """Creates a Unified logger with a default logdir prefix
+            containing the agent name and the env id
+            """
+            if config['multiagent']['policies_to_train'][0] == '0':
+                agent_path = os.path.join(EXPERIMENT_PATH, "player0")
+            elif config['multiagent']['policies_to_train'][0] == '1':
+                agent_path = os.path.join(EXPERIMENT_PATH, "player1")
+            create_dir(agent_path, clean=True)
+            return UnifiedLogger(config, agent_path, loggers=None)
+
+        logger_creator = default_logger_creator
+
+    agent0 = agent0_constructor(
         env="gathering",
-        config={
-            "num_gpus": 0.45,
-            "num_workers": 2,
-            "multiagent": {
-                "policies": policies,
-                "policy_mapping_fn": policy_mapping,
-                "policies_to_train": ["0"],
-            },
-            "monitor": True,
-            "gamma": 0.95,
-            # size of the replay buffer
-            "buffer_size": 1_000,
-            # Whether to use dueling dqn
-            "dueling": True,
-            # Whether to use double dqn
-            "double_q": True,
-            "sample_batch_size": 20,
-        })
+        logger_creator=logger_creator,
+        config=agent0_configs
+    )
 
-    dqn_trainer2 = DQNTrainer(
+    agent1 = agent1_constructor(
         env="gathering",
-        config={
-            "num_gpus": 0.45,
-            "num_workers": 1,
-            "multiagent": {
-                "policies": policies,
-                "policy_mapping_fn": policy_mapping,
-                "policies_to_train": ["1"],
-            },
-            "gamma": 0.95,
-            # size of the replay buffer
-            "buffer_size": 20_000,
-            # Whether to use dueling dqn
-            "dueling": True,
-            # Whether to use double dqn
-            "double_q": True,
-            "monitor": True,
-        })
-    return dqn_trainer1, dqn_trainer2
+        logger_creator=logger_creator,
+        config=agent1_configs
+    )
 
-
-def get_player_trainers(evaluate, murder_mode):
-    policies, policy_mapping = get_agent_policies(murder_mode)
-    dqn_trainer1 = DQNTrainer(
-        env="gathering",
-        config={
-            "num_gpus": 0.5,
-            "multiagent": {
-                "policies": policies,
-                "policy_mapping_fn": policy_mapping,
-                "policies_to_train": ["0"],
-            },
-            # Discount Factor
-            "gamma": 0.95,
-            "n_step": 3,
-            # size of the replay buffer
-            "buffer_size": 1_000,
-            # Whether to use dueling dqn
-            "dueling": True,
-            # Whether to use double dqn
-            "double_q": True,
-            #  == DEBUG ==
-            "monitor": True,
-        })
-
-    dqn_trainer2 = DQNTrainer(
-        env="gathering",
-        config={
-            "num_gpus": 0.5,
-            "multiagent": {
-                "policies": policies,
-                "policy_mapping_fn": policy_mapping,
-                "policies_to_train": ["1"],
-            },
-            # Discount Factor
-            "gamma": 0.95,
-            "n_step": 3,
-            # size of the replay buffer
-            "buffer_size": 50_000,
-            # Whether to use dueling dqn
-            "dueling": True,
-            # Whether to use double dqn
-            "double_q": True,
-            #== DEBUG ==
-            "monitor": True,
-        })
-    return dqn_trainer1, dqn_trainer2
+    return agent0, agent1

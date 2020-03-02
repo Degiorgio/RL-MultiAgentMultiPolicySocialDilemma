@@ -13,6 +13,12 @@ FOOD_LITTLE = 2
 FOOD_NORMAL = 4
 FOOD_ALOT = 7
 
+foot_level_string_map = {
+    1: "tiny",
+    2: "little",
+    4: "normal",
+    7: "alot"
+}
 
 class Apple(Blob):
     def __init__(self, size, x=None, y=None):

@@ -1,87 +1,200 @@
-import ray
-import ray.rllib
-from ray.tune.registry import register_env
-from configs import get_player_trainers
-from train import MURDER_MODE
-
+import sys
+import os
+import json
+import glob
+from tqdm import tqdm
 import numpy as np
+from collections import Counter
+from configs import get_player_trainers, env_creator
+from util import create_dir
 
-# model_path_player0 = "/home/kurt/ray_results/DQN_gathering_2020-02-24_20-06-05akl10q_v/checkpoint_1/checkpoint-1"
-# model_path_player1 = "/home/kurt/ray_results/DQN_gathering_2020-02-24_20-06-05akl10q_v/checkpoint_1/checkpoint-1"
 
-# model_path_player0="/home/kurt/ray_results/DQN_gathering_2020-02-24_22-59-34b9yzsvsg/checkpoint_301/checkpoint-301"
-# model_path_player1="/home/kurt/ray_results/DQN_gathering_2020-02-24_22-59-37hhb5hqbf/checkpoint_301/checkpoint-301"
+def _render_video(images):
+    return
 
-model_path_player0="/home/kurt/ray_results/DQNvsDQN_Player0_MurderMode/checkpoint_2501/checkpoint-2501"
-model_path_player1="/home/kurt/ray_results/DQNvsDQN_Player1_MurderMode/checkpoint_2501/checkpoint-2501"
 
-51
+def _save_image(step, img, experiment_path):
+    img_path = os.path.join(experiment_path, "render")
+    create_dir(img_path, clean=False)
+    if step == 0:
+        files = glob.glob(f'{img_path}/*')
+        for f in files:
+            os.remove(f)
+    img_path = os.path.join(img_path, f"{str(step).zfill(5)}.png")
+    img = img.resize((1000, 1000))
+    img.save(img_path)
 
-def play_game(trainerplayer0, trainerplayer1, episodes=5):
-    from collections import Counter
-    env = env_creator(None)
-    player0_action_distribution = [0]*env._get_action_space()
-    player1_action_distribution = [0]*env._get_action_space()
+
+def _play_game(trainerplayer0,
+               trainerplayer1,
+               env,
+               steps_per_episode,
+               episodes,
+               save_images,
+               experiment_path,
+               render_video):
+    from env.blob import action_string_map
+    from env.gridworld import foot_level_string_map
+    print("-----------------------------------------")
+
+    player0_action_distribution = \
+        dict.fromkeys(action_string_map.keys(), 0)
+    player1_action_distribution = \
+        dict.fromkeys(action_string_map.keys(), 0)
+
     average_reward = Counter({"player0": 0, "player1": 0})
-    for episode in range(episodes):
+    for episode in tqdm(range(episodes)):
         current_state = env.reset()
+        step = 0
         cum_rewards = Counter({"player0": 0, "player1": 0})
+        if episode == 0 and save_images:
+            _save_image(step, env._get_image(), experiment_path)
         while True:
+            step += 1
             if trainerplayer1 is None:
                 # Use Random Policy
                 actions = {
-                    "player0": trainerplayer0.compute_action(current_state["player0"], policy_id="0"),
-                    "player1": np.random.randint(0, len(player1_action_distribution))
+                    "player0": trainerplayer0.compute_action(
+                        current_state["player0"],
+                        policy_id="0",
+                        explore=False),
+                    "player1": np.random.randint(0, env._get_action_space())
                 }
             else:
                 actions = {
-                    "player0": trainerplayer0.compute_action(current_state["player0"], policy_id="0"),
-                    "player1": trainerplayer1.compute_action(current_state["player1"], policy_id="1")
+                    "player0": trainerplayer0.compute_action(
+                        current_state["player0"],
+                        policy_id="0",
+                        explore=False),
+                    "player1": trainerplayer1.compute_action(
+                        current_state["player1"],
+                        policy_id="1",
+                        explore=False)
                 }
             player0_action_distribution[actions["player0"]] += 1
             player1_action_distribution[actions["player1"]] += 1
             new_observaton, rewards, done, info = env.step(actions)
+            if episode == 0 and save_images:
+                _save_image(step, env._get_image(), experiment_path)
             cum_rewards.update(rewards)
             current_state = new_observaton
             if done['__all__']:
                 break
-        print("rewards",  cum_rewards)
+        # print("rewards",  cum_rewards)
         average_reward.update(cum_rewards)
+        if render_video and episode == 0:
+            render_video(os.path.join(experiment_path, "render")
+    print("-----------------------------------------")
     player0_action_distribution = \
-        np.array(player0_action_distribution)/episodes
+        {action_string_map[k]: ((v/episodes)/steps_per_episode) for k, v in player0_action_distribution.items()}
     player1_action_distribution = \
-        np.array(player1_action_distribution)/episodes
+        {action_string_map[k]: ((v/episodes)/steps_per_episode) for k, v in player1_action_distribution.items()}
+
     print("action distribution player 0", player0_action_distribution)
     print("action distribution player 1", player1_action_distribution)
     average_reward['player0'] = average_reward['player0']/episodes
     average_reward['player1'] = average_reward['player1']/episodes
-    print(average_reward)
+    print("average reward:", average_reward)
 
 
-def env_creator(env_config):
-    from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
-    from env.gridworld import GatheringEnv
-    env = GatheringEnv(size=42,
-                       num_players=2,
-                       max_steps=200,
-                       player_move_cost=1,
-                       player_respawn_time=5,
-                       player_murder_mode=MURDER_MODE,
-                       food_reward=25,
-                       food_respawn_time=10,
-                       food_level=FOOD_ALOT)
-    return env
+def evaluate(experiment_path,
+             NUM_EPISODES,
+             player_0_checkpoint_index,
+             player_1_checkpoint_index,
+             USE_RANDOM_POLICY_FOR_PLAYER_1,
+             save_images,
+             render_video):
+    # setup paths
+    experiment_params_path = os.path.join(experiment_path, "experiment.json")
+    player1_path = os.path.join(experiment_path, "player1")
+    player0_path = os.path.join(experiment_path, "player0")
 
+    parameters_player0_path = os.path.join(player0_path, "params.json")
+    parameters_player1_path = os.path.join(player1_path, "params.json")
 
-if __name__ == "__main__":
-    ray.init()
-    register_env("gathering", env_creator)
+    assert(os.path.exists(experiment_params_path))
+    assert(os.path.exists(parameters_player0_path))
+    assert(os.path.exists(parameters_player1_path))
 
-    trainer0, trainer1 = \
-        get_player_trainers(evaluate=True, murder_mode=MURDER_MODE)
+    checkpoints_player0 = glob.glob(
+        os.path.join(player0_path, "checkpoint_*"),
+        recursive=False)
+    checkpoints_player1 = glob.glob(
+        os.path.join(player1_path, "checkpoint_*"),
+        recursive=False)
 
+    checkpoints_player0.sort(
+        key=lambda x: int(os.path.basename(x).split('.')[0][11:]))
+    checkpoints_player1.sort(
+        key=lambda x: int(os.path.basename(x).split('.')[0][11:]))
+
+    model_path_player0 = os.path.join(
+        checkpoints_player0[player_0_checkpoint_index],
+        "checkpoint-"+os.path.basename(checkpoints_player0[player_0_checkpoint_index])[11:])
+
+    model_path_player1 = os.path.join(
+        checkpoints_player1[player_1_checkpoint_index],
+        "checkpoint-"+os.path.basename(checkpoints_player1[player_1_checkpoint_index])[11:])
+
+    assert(os.path.exists(model_path_player0))
+    assert(os.path.exists(model_path_player1))
+
+    print("-----------------------------------------")
+    print(f"using checkpoint {model_path_player0} for player 0")
+    print(f"using checkpoint {model_path_player1} for player 1")
+
+    # load params used to train
+    with open(experiment_params_path, 'r') as f:
+        experiment_params = json.load(f)
+
+    env_config = experiment_params['env_configs']
+    print("-----------------------------------------")
+    print("configs")
+    print(json.dumps(experiment_params, indent=4, sort_keys=True))
+    print("-----------------------------------------")
+
+    trainer0, trainer1 = get_player_trainers(True, experiment_params)
     trainer0.restore(model_path_player0)
     trainer1.restore(model_path_player1)
 
-    # play_game(trainer0, None, episodes=5)
-    play_game(trainer0, trainer1, episodes=5)
+    steps_per_episode = env_config["steps_per_episode"]
+    env = env_creator(env_config=env_config)
+
+    if USE_RANDOM_POLICY_FOR_PLAYER_1:
+        print("using random policy for player 1")
+        _play_game(trainer0,
+                   None,
+                   env=env, episodes=NUM_EPISODES,
+                   steps_per_episode=steps_per_episode,
+                   save_images=save_images,
+                   experiment_path=experiment_path,
+                   render_video=render_video)
+    else:
+        _play_game(trainer0, trainer1,
+                   env=env,
+                   episodes=NUM_EPISODES,
+                   steps_per_episode=steps_per_episode,
+                   save_images=save_images,
+                   experiment_path=experiment_path,
+                   render_video=render_video)
+
+
+if __name__ == "__main__":
+    # required configs
+    experiment_path = sys.argv[1]
+    NUM_EPISODES = int(sys.argv[2])
+
+    # optional configs
+    player_0_checkpoint_index = -1
+    player_1_checkpoint_index = -1
+    USE_RANDOM_POLICY_FOR_PLAYER_1 = False
+    save_images = True
+    render_video = True
+
+    evaluate(experiment_path,
+             NUM_EPISODES,
+             player_0_checkpoint_index,
+             player_1_checkpoint_index,
+             USE_RANDOM_POLICY_FOR_PLAYER_1,
+             save_images,
+             render_video)
