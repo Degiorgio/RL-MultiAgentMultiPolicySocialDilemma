@@ -1,12 +1,11 @@
 import numpy as np
 import cv2
 from PIL import Image
-from env.blob import Blob
+from env.blob import Blob, Point
 import collections
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
 
-Point = collections.namedtuple('Point', 'x y')
 
 FOOD_TINY = 1
 FOOD_LITTLE = 2
@@ -38,12 +37,14 @@ class Apple(Blob):
 
 
 class Player(Blob):
-    def __init__(self, pid, size, color, x=None, y=None, facing_dir=None):
+    def __init__(self, pid, size, beam_color, color, x=None, y=None, facing_dir=None):
         super(Player, self).__init__(size, x, y, facing_dir)
         self.pid = pid
         self.dead = False
         self.time_of_death = None
         self.color = color
+        self.draw_beam = False
+        self.beam_color = beam_color
 
     def died(self, step):
         self.dead = True
@@ -78,6 +79,8 @@ class GatheringEnv(MultiAgentEnv):
                  food_reward=25,
                  food_respawn_time=20,
                  food_level=FOOD_NORMAL,
+                 beam_color_diff=False,
+                 draw_beam=False,
                  draw_shooting_direction=True):
 
         self.size = size
@@ -89,6 +92,8 @@ class GatheringEnv(MultiAgentEnv):
         self.murder_mode = player_murder_mode
         self.player_respawn_time = player_respawn_time
         self.draw_shooting_direction = draw_shooting_direction
+        self.draw_beam = draw_beam
+        self.beam_color_diff = beam_color_diff
 
         self.food = None
         self.food_level = food_level
@@ -109,9 +114,12 @@ class GatheringEnv(MultiAgentEnv):
             start=np.array([(self.size//2)-5, (self.size//2)-5]))
 
         # generate players
-        self._add_player(color=(255, 0, 0))
+        self._add_player(beam_c=(255, 255, 255), color=(255, 0, 0))
         if self.num_players == 2:
-            self._add_player(color=(0, 0, 255))
+            if self.beam_color_diff:
+                self._add_player(beam_c=(255, 192, 203), color=(0, 0, 255))
+            else:
+                self._add_player(beam_c=(255, 255, 255), color=(0, 0, 255))
         elif self.num_players != 1:
             raise NotImplementedError("only 1-2 players supported")
 
@@ -125,22 +133,36 @@ class GatheringEnv(MultiAgentEnv):
         assert(len(actions) == len(self.players))
         self.episode_step += 1
         rewards = [0 for x in range(len(self.players))]
-        for player_index, player in enumerate(self.players):
-            player.action(actions[f"player{player_index}"], self.murder_mode)
-            if player in self.food:
-                food_index = self.food.index(player)
-                self.food[food_index].collect(self.episode_step)
-                rewards[player_index] += self.food_reward
-            else:
-                rewards[player_index] += -self.player_move_cost
 
+        # collect foood
+        for player_index, player in enumerate(self.players):
+            player.draw_beam = False
+            obstructed = player.action(
+                actions[f"player{player_index}"],
+                self.murder_mode,
+                self.players[:player_index] + self.players[player_index+1:])
+            if obstructed:
+                rewards[player_index] += -(self.player_move_cost)
+                continue
             if self.murder_mode and player.beam:
                 player.beam = False
+                player.draw_beam = True
                 for player2 in self.players:
                     if player.pid == player2.pid:
                         continue
                     if player2.hit_by(player):
                         player2.died(self.episode_step)
+
+            if player in self.food:
+                food_index = self.food.index(player)
+                if self.food[food_index].collected:
+                    rewards[player_index] += -self.player_move_cost
+                else:
+                    self.food[food_index].collect(self.episode_step)
+                    rewards[player_index] += self.food_reward
+            else:
+                rewards[player_index] += -self.player_move_cost
+
 
         rewards = {f"player{i}": reward for i, reward in enumerate(rewards)}
 
@@ -159,7 +181,8 @@ class GatheringEnv(MultiAgentEnv):
             if apple.collected:
                 elapsed_time = self.episode_step - apple.collected_time
                 if elapsed_time >= self.food_respawn_time:
-                    apple.respawn()
+                    if apple not in self.players:
+                        apple.respawn()
 
         # compute new_observation
         new_observations = {}
@@ -184,6 +207,7 @@ class GatheringEnv(MultiAgentEnv):
                 img = self._get_image()
                 cv2.imshow("image", np.array(img))
                 cv2.waitKey(0)
+                cv2.destroyAllWindows()
         else:
             raise Exception("unsupported render mode: " + mode)
 
@@ -209,13 +233,13 @@ class GatheringEnv(MultiAgentEnv):
                 col = start[1] + size - 1 - idx + i
                 self.food.append(Apple(size=self.size, x=row, y=col))
 
-    def _add_player(self, color):
+    def _add_player(self, beam_c, color):
         player = Player(
-            len(self.players), self.size, color=color, facing_dir=0
+            len(self.players), self.size, beam_color=beam_c, color=color, facing_dir=0
         )
         while player in self.food or player in self.players:
             player = Player(
-                len(self.players), self.size, color=color, facing_dir=0
+                len(self.players), self.size, beam_color=beam_c, color=color, facing_dir=0
             )
         self.players.append(player)
 
@@ -245,9 +269,31 @@ class GatheringEnv(MultiAgentEnv):
                         return True
         return False
 
+    def _contains_beam(self, x, y):
+        # draw beam
+        point = Point(x=x, y=y)
+        for player in self.players:
+            if player.draw_beam:
+                points = player.get_hit_intervals()
+                if point in points:
+                    return True
+        return False
+
     def _get_image(self):
         # starts an rbg of our size
         env = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+
+        # draw beam
+        if self.murder_mode and self.draw_beam:
+            for player in self.players:
+                if player.draw_beam:
+                    env = player.set_hit(env, player.beam_color)
+
+        # shooting direction
+        if self.murder_mode and self.draw_shooting_direction:
+            for player in self.players:
+                facing = player.get_facing()
+                env[facing[0]][facing[1]] = (128, 128, 128)
 
         # draw food
         for apple in self.food:
@@ -258,9 +304,6 @@ class GatheringEnv(MultiAgentEnv):
         for player in self.players:
             if not player.dead:
                 env[player.x][player.y] = player.color
-                if self.murder_mode and self.draw_shooting_direction:
-                    facing = player.get_facing()
-                    env[facing[0]][facing[1]] = (128, 128, 128)
 
         # reading to rgb. Apparently. Even tho color definitions are bgr. ???
         img = Image.fromarray(env, 'RGB')

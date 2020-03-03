@@ -7,6 +7,9 @@ from ray.tune.logger import UnifiedLogger
 from ray.rllib.agents.dqn.dqn import DQNTrainer
 from ray.rllib.agents.dqn.dqn_policy import DQNTFPolicy
 
+from ray.rllib.agents.ppo.ppo import PPOTrainer
+from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
+
 from util import create_dir
 
 DEFAULT_RESULTS_DIR = "out"
@@ -15,6 +18,8 @@ DEFAULT_RESULTS_DIR = "out"
 def _get_tf(pol):
     if pol == "DQN":
         return DQNTFPolicy
+    elif pol == "PPO":
+        return PPOTFPolicy
     else:
         raise Exception("not supported")
 
@@ -22,6 +27,8 @@ def _get_tf(pol):
 def _get_trainer_constructor(pol):
     if pol == "DQN":
         return DQNTrainer
+    elif pol == "PPO":
+        return PPOTrainer
     else:
         raise Exception("not supported")
 

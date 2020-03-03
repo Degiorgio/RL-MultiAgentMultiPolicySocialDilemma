@@ -1,10 +1,13 @@
 from tqdm import tqdm
 from configs import get_player_trainers
-from experiments_configs import experiment_DQN_DQN_no_murder
+from experiments_configs import experiment_DQN_DQN, experiment_scarse, experiment_very_scarse
 
 NUM_EPISODES = 2_500
 CHECKPOIINT_INTERVAL = 50
-EXPERIMENT_CONFIGS = experiment_DQN_DQN_no_murder()
+
+# EXPERIMENT_CONFIGS = experiment_DQN_DQN(experiment_very_scarse, "TestForShooting_very_scare")
+EXPERIMENT_CONFIGS = experiment_DQN_DQN(experiment_very_scarse(), "TestForShooting_scare")
+
 
 if __name__ == "__main__":
     print("-----------------------------------------")

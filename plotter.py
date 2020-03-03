@@ -19,6 +19,7 @@ assert(os.path.exists(results_path_player1))
 def parse(path):
     df = pd.read_csv(path, index_col="episodes_total")
     episodes_per_step = df.index.to_list()
+    import ipdb; ipdb.set_trace()
     episode_reward_max = df['episode_reward_max'].to_list()
     episode_reward_min = df['episode_reward_min'].to_list()
     episode_reward_mean = df['episode_reward_mean'].to_list()
@@ -31,6 +32,7 @@ def parse(path):
 
 player1 = parse(results_path_player0)
 player2 = parse(results_path_player1)
+
 
 fig = plt.figure()
 

@@ -5,7 +5,9 @@ from env.gridworld import GatheringEnv
 from env.blob import UP, DOWN, LEFT, RIGHT, NOTHING
 from env.blob import ROTATE_LEFT, ROTATE_RIGHT, SHOOT
 
-GRID_WORLD_SIZE = 42
+from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
+
+GRID_WORLD_SIZE = 20
 WIDTH = GRID_WORLD_SIZE
 HEIGHT = GRID_WORLD_SIZE
 MARGIN = 1
@@ -17,14 +19,14 @@ NUM_PLAYERS = 2
 
 class Gathering(arcade.Window):
     def __init__(self):
-        if NUM_PLAYERS == 1:
-            self.env = GatheringEnv(size=GRID_WORLD_SIZE,
-                                    num_players=NUM_PLAYERS,
-                                    player_murder_mode=False)
-        else:
-            self.env = GatheringEnv(size=GRID_WORLD_SIZE,
-                                    num_players=NUM_PLAYERS,
-                                    player_murder_mode=False)
+        self.env = GatheringEnv(size=GRID_WORLD_SIZE,
+                                num_players=NUM_PLAYERS,
+                                food_level=FOOD_TINY,
+                                food_respawn_time=100,
+                                player_murder_mode=True,
+                                player_move_cost=0,
+                                food_reward=1,
+                                draw_beam=True)
         self.set_update_rate(1 / 10)
         self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -65,23 +67,26 @@ class Gathering(arcade.Window):
         elif key == arcade.key.C:
             action = NOTHING
         elif key == arcade.key.ENTER:
-            self.env.render()
+            self.env.render("human")
         elif key == arcade.key.BACKSPACE:
             self.env.render(close=True)
         elif key == arcade.key.SPACE:
             action = SHOOT
+            action2 = SHOOT
         elif key == arcade.key.HOME:
             action2 = SHOOT
         if action is not None:
             try:
                 if NUM_PLAYERS == 2:
                     states, rewards, done, info = self.env.step({"player0":action, "player1":action2})
+                    if action == SHOOT:
+                        self.env.render("human")
                 else:
                     states, rewards, done, info = self.env.step({"player0":action})
             except Exception as e:
                 import traceback
-                traceback.print_exception(e)
                 import ipdb; ipdb.set_trace()
+                traceback.print_exception(e)
 
             print(f"Player locations {self.env.players}")
             print(f"Action rewards {rewards}")
@@ -103,6 +108,8 @@ class Gathering(arcade.Window):
                     color = arcade.color.BLUE
                 elif self.env._contains_player(row, column, 2):
                     color = arcade.color.RED
+                elif self.env._contains_beam(row, column):
+                    color = arcade.color.ORANGE
                 elif self.env._contains_player_direction(row, column):
                     color = arcade.color.GRAY
                 else:

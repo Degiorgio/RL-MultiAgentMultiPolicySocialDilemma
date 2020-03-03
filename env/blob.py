@@ -1,4 +1,7 @@
 import numpy as np
+import collections
+
+Point = collections.namedtuple('Point', 'x y')
 
 # actions
 UP = 0
@@ -69,45 +72,45 @@ class Blob:
     # (x=SIZE,y=SIZE)=bottom rigth
     # and
     # (x=0, y=0)=top left
-    def action(self, choice, murder_mode):
+    def action(self, choice, murder_mode, obstructions):
         if not murder_mode:
             if choice == UP:
                 # move up
-                self.move(x=1, y=0)
+                return self.move(x=1, y=0, obstructions=obstructions)
                 # self.move(x=0, y=-1)
             elif choice == DOWN:
                 #  move down
-                self.move(x=-1, y=0)
+                return self.move(x=-1, y=0, obstructions=obstructions)
                 # self.move(x=0, y=1)
             elif choice == LEFT:
                 # move left
                 # self.move(x=-1, y=0)
-                self.move(x=0, y=-1)
+                return self.move(x=0, y=-1, obstructions=obstructions)
             elif choice == RIGHT:
                 # move right
                 # self.move(x=1, y=0)
-                self.move(x=0, y=1)
+                return self.move(x=0, y=1, obstructions=obstructions)
             elif choice == NOTHING:
-                return
+                return False
             else:
                 raise NotImplementedError(f"action {choice} not supported")
         else:
             if choice == UP:
                 # move up
-                self.move(x=1, y=0)
+                return self.move(x=1, y=0, obstructions=obstructions)
                 # self.move(x=0, y=-1)
             elif choice == DOWN:
                 #  move down
-                self.move(x=-1, y=0)
+                return self.move(x=-1, y=0, obstructions=obstructions)
                 # self.move(x=0, y=1)
             elif choice == LEFT:
                 # move left
                 # self.move(x=-1, y=0)
-                self.move(x=0, y=-1)
+                return self.move(x=0, y=-1, obstructions=obstructions)
             elif choice == RIGHT:
                 # move right
                 # self.move(x=1, y=0)
-                self.move(x=0, y=1)
+                return self.move(x=0, y=1, obstructions=obstructions)
             elif choice == ROTATE_LEFT:
                 self.facing_dir += 1
             elif choice == ROTATE_RIGHT:
@@ -115,22 +118,33 @@ class Blob:
             elif choice == SHOOT:
                 self.beam = True
             elif choice == NOTHING:
-                return
+                return False
             else:
                 raise NotImplementedError(f"action {choice} not supported")
+        return False
 
-    def move(self, x=None, y=None):
+    def move(self, x=None, y=None, obstructions=None):
         # if no value for x, move randomly
+        p_x = self.x
+        p_y = self.y
         if x is None:
-            self.x += np.random.randint(-1, 2)
+            p_x += np.random.randint(-1, 2)
         else:
-            self.x += x
+            p_x += x
 
         # if no value for y, move randomly
         if y is None:
-            self.y += np.random.randint(-1, 2)
+            p_y += np.random.randint(-1, 2)
         else:
-            self.y += y
+            p_y += y
+
+        # make sure we are not obstructed
+        point = Point(x=p_x, y=p_y)
+        if point in obstructions:
+            return True
+
+        self.x = p_x
+        self.y = p_y
 
         # if we are out of bounds, fix!
         if self.x < 1:
@@ -141,6 +155,8 @@ class Blob:
             self.y = 1
         elif self.y > self.size-2:
             self.y = self.size-2
+
+        return False
 
     def get_facing(self):
         direction = (self.facing_dir) % 4
@@ -156,6 +172,39 @@ class Blob:
             raise NotImplementedError(
                 f"facing {self.facing_dir} not supported"
             )
+
+    def get_hit_intervals(self):
+        direction = (self.facing_dir) % 4
+        points = []
+        if direction == NORTH:
+            x_points = list(range(1, self.x))
+            y_points = [self.y]*len(x_points)
+        if direction == SOUTH:
+            x_points = list(range(self.x+1, self.size-1))
+            y_points = [self.y]*len(x_points)
+        elif direction == WEST:
+            y_points = list(range(1, self.y))
+            x_points = [self.x]*len(y_points)
+        elif direction == EAST:
+            y_points = list(range(self.y+1, self.size-1))
+            x_points = [self.x]*len(y_points)
+        points = list(zip(x_points, y_points))
+        return points
+
+    def set_hit(self, array, value):
+        direction = (self.facing_dir) % 4
+        if direction == NORTH:
+            array[1:self.x, self.y] = value
+            return array
+        if direction == SOUTH:
+            array[self.x+1:self.size-1, self.y] = value
+            return array
+        elif direction == WEST:
+            array[self.x, 1:self.y] = value
+            return array
+        elif direction == EAST:
+            array[self.x, self.y+1:self.size-1] = value
+            return array
 
     def hit_by(self, other):
         direction = (other.facing_dir) % 4
@@ -173,3 +222,4 @@ class Blob:
             if other.y <= self.y and self.x == other.x:
                 hit = True
         return hit
+

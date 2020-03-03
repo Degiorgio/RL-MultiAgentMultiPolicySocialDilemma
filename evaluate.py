@@ -9,9 +9,9 @@ from configs import get_player_trainers, env_creator
 from util import create_dir
 
 
-def _render_video(images):
+def _render_video(image_path):
+    # TODO
     return
-
 
 def _save_image(step, img, experiment_path):
     img_path = os.path.join(experiment_path, "render")
@@ -83,7 +83,7 @@ def _play_game(trainerplayer0,
         # print("rewards",  cum_rewards)
         average_reward.update(cum_rewards)
         if render_video and episode == 0:
-            render_video(os.path.join(experiment_path, "render")
+            _render_video(os.path.join(experiment_path, "render"))
     print("-----------------------------------------")
     player0_action_distribution = \
         {action_string_map[k]: ((v/episodes)/steps_per_episode) for k, v in player0_action_distribution.items()}
@@ -95,6 +95,17 @@ def _play_game(trainerplayer0,
     average_reward['player0'] = average_reward['player0']/episodes
     average_reward['player1'] = average_reward['player1']/episodes
     print("average reward:", average_reward)
+
+    with open(os.path.join(experiment_path, "results_eval.json"), "w") as f:
+        results = {
+            "player0_action_distribution": player0_action_distribution,
+            "player1_action_distribution": player1_action_distribution,
+            "player0_reward": average_reward['player0'],
+            "player1_reward": average_reward['player1'],
+            "number_of_episodes": episodes
+        }
+        json.dump(results, f, indent=4)
+
 
 
 def evaluate(experiment_path,
