@@ -81,6 +81,8 @@ class GatheringEnv(MultiAgentEnv):
                  food_level=FOOD_NORMAL,
                  beam_color_diff=False,
                  draw_beam=False,
+                 randomized_food=False,
+                 shoot_in_all_directions=False,
                  draw_shooting_direction=True):
 
         self.size = size
@@ -94,6 +96,8 @@ class GatheringEnv(MultiAgentEnv):
         self.draw_shooting_direction = draw_shooting_direction
         self.draw_beam = draw_beam
         self.beam_color_diff = beam_color_diff
+        self.randomized_food = randomized_food
+        self.randomized_food = randomized_food
 
         self.food = None
         self.food_level = food_level

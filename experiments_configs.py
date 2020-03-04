@@ -2,7 +2,7 @@ from configs import get_player_trainers
 from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
 
 
-def experiment_scarse(murder_mode=True, steps_per_episode=1000):
+def env_scarse(murder_mode=True, steps_per_episode=1000, beam_color_diff=True, draw_beam=True, draw_shooting_direction=True):
     return {
         "size": 42,
         "num_players": 2,
@@ -11,15 +11,14 @@ def experiment_scarse(murder_mode=True, steps_per_episode=1000):
         "player_move_cost": 0,
         "player_respawn_time": 300,
         "food_reward": 1,
-        "food_respawn_time": 100,
+        "food_respawn_time": 60,
         "food_level": FOOD_LITTLE,
-        "beam_color_diff": True,
-        "draw_beam": True,
-        "draw_shooting_direction": True
+        "beam_color_diff": beam_color_diff,
+        "draw_beam": draw_beam,
+        "draw_shooting_direction": draw_shooting_direction
     }
 
-
-def experiment_very_scarse(murder_mode=True, steps_per_episode=1000):
+def env_very_scarse(murder_mode=True, steps_per_episode=1000, beam_color_diff=True, draw_beam=True, draw_shooting_direction=True):
     return {
             "size": 42,
             "num_players": 2,
@@ -30,53 +29,45 @@ def experiment_very_scarse(murder_mode=True, steps_per_episode=1000):
             "food_reward": 1,
             "food_respawn_time": 20,
             "food_level": FOOD_TINY,
-            "beam_color_diff": True,
-            "draw_beam": True,
-            "draw_shooting_direction": True
+            "beam_color_diff": beam_color_diff,
+            "draw_beam": draw_beam,
+            "draw_shooting_direction": draw_shooting_direction
     }
 
 
-
-# def __abudent(murder_mode, steps_per_episode):
-#     return {
-#             "size": 42,
-#             "num_players": 2,
-#             "murder_mode": murder_mode,
-#             "steps_per_episode": steps_per_episode,
-#             "player_move_cost": 0,
-#             "player_respawn_time": 5,
-#             "food_reward": 1,
-#             "food_respawn_time": 30,
-#             "food_level": FOOD_ALOT
-#     }
-
-
-# def __scarse(murder_mode, steps_per_episode):
-#     return {
-#             "size": 42,
-#             "num_players": 2,
-#             "murder_mode": murder_mode,
-#             "steps_per_episode": steps_per_episode,
-#             "player_move_cost": 0,
-#             "player_respawn_time": 5,
-#             "food_reward": 1,
-#             "food_respawn_time": 20,
-#             "food_level": FOOD_LITTLE
-#     }
+def env_abudent(murder_mode=True, steps_per_episode=1000, beam_color_diff=True, draw_beam=True, draw_shooting_direction=True):
+    return {
+            "size": 42,
+            "num_players": 2,
+            "murder_mode": murder_mode,
+            "steps_per_episode": steps_per_episode,
+            "player_move_cost": 0,
+            "player_respawn_time": 300,
+            "food_reward": 1,
+            "food_respawn_time": 30,
+            "food_level": FOOD_ALOT,
+            "beam_color_diff": beam_color_diff,
+            "draw_beam": draw_beam,
+            "draw_shooting_direction": draw_shooting_direction
+    }
 
 
-# def __very_scarse(murder_mode, steps_per_episode):
-#     return {
-#             "size": 42,
-#             "num_players": 2,
-#             "murder_mode": murder_mode,
-#             "steps_per_episode": steps_per_episode,
-#             "player_move_cost": 0,
-#             "player_respawn_time": 5,
-#             "food_reward": 1,
-#             "food_respawn_time": 10,
-#             "food_level": FOOD_LITTLE
-#     }
+def env_normal(murder_mode=True, steps_per_episode=1000, beam_color_diff=True, draw_beam=True, draw_shooting_direction=True):
+    return {
+            "size": 42,
+            "num_players": 2,
+            "murder_mode": murder_mode,
+            "steps_per_episode": steps_per_episode,
+            "player_move_cost": 0,
+            "player_respawn_time": 300,
+            "food_reward": 1,
+            "food_respawn_time": 20,
+            "food_level": FOOD_NORMAL,
+            "beam_color_diff": beam_color_diff,
+            "draw_beam": draw_beam,
+            "draw_shooting_direction": draw_shooting_direction
+    }
+
 
 def experiment_DQN_DQN(envq, env_string):
     experiment_configs = {
@@ -145,7 +136,7 @@ def experiment_DQN_PPO_no_murder(envq, env_string):
                "type": "EpsilonGreedy",
                "initial_epsilon": 1.0,
                "final_epsilon": 0.02,
-               "epsilon_timesteps": 150_000,
+               "epsilon_timesteps": 400_000,
             }
         },
         "agent1_alg": "PPO",

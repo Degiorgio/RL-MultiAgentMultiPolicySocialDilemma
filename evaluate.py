@@ -1,3 +1,5 @@
+from multiprocessing import Process
+import multiprocessing as mp
 import sys
 import os
 import json
@@ -190,18 +192,16 @@ def evaluate(experiment_path,
                    render_video=render_video)
 
 
-if __name__ == "__main__":
-    # required configs
-    experiment_path = sys.argv[1]
-    NUM_EPISODES = int(sys.argv[2])
-
+# experiment_path = sys.argv[1]
+# NUM_EPISODES = int(sys.argv[2])
+def main(experiment_path, NUM_EPISODES):
+    print(f"evaluating {experiment_path}")
     # optional configs
     player_0_checkpoint_index = -1
     player_1_checkpoint_index = -1
     USE_RANDOM_POLICY_FOR_PLAYER_1 = False
     save_images = True
     render_video = True
-
     evaluate(experiment_path,
              NUM_EPISODES,
              player_0_checkpoint_index,
@@ -209,3 +209,18 @@ if __name__ == "__main__":
              USE_RANDOM_POLICY_FOR_PLAYER_1,
              save_images,
              render_video)
+
+
+
+folders = glob.glob("out/*/")
+processes = []
+for folder in folders:
+    if not os.path.exists(os.path.join(folder, "results_eval.json")):
+        p = Process(target=main, args=(folder, 100))
+        p.start()
+        processes.append(p)
+
+mp.set_start_method('spawn')
+for x in processes:
+    x.join()
+

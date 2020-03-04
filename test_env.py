@@ -22,8 +22,9 @@ class Gathering(arcade.Window):
         self.env = GatheringEnv(size=GRID_WORLD_SIZE,
                                 num_players=NUM_PLAYERS,
                                 food_level=FOOD_TINY,
-                                food_respawn_time=100,
+                                food_respawn_time=10,
                                 player_murder_mode=True,
+                                player_respawn_time=200,
                                 player_move_cost=0,
                                 food_reward=1,
                                 draw_beam=True)
