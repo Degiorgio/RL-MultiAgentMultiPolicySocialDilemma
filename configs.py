@@ -35,15 +35,9 @@ def _get_trainer_constructor(pol):
 
 def env_creator(env_config):
     from env.gridworld import GatheringEnv
-    env = GatheringEnv(size=env_config['size'],
-                       num_players=env_config['num_players'],
-                       max_steps=env_config['steps_per_episode'],
-                       player_move_cost=env_config['player_move_cost'],
-                       player_respawn_time=env_config['player_respawn_time'],
-                       player_murder_mode=env_config['murder_mode'],
-                       food_reward=env_config['food_reward'],
-                       food_respawn_time=env_config['food_respawn_time'],
-                       food_level=env_config['food_level'])
+    if "randomized_food" not in env_config:
+        env_config["randomized_food"] = False
+    env = GatheringEnv(**env_config)
     return env
 
 

@@ -6,6 +6,8 @@ from env.blob import UP, DOWN, LEFT, RIGHT, NOTHING
 from env.blob import ROTATE_LEFT, ROTATE_RIGHT, SHOOT
 
 from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
+from configs import env_creator
+from experiments_configs import env_scarse, env_very_scarse, env_abudent, env_normal
 
 GRID_WORLD_SIZE = 20
 WIDTH = GRID_WORLD_SIZE
@@ -19,15 +21,17 @@ NUM_PLAYERS = 2
 
 class Gathering(arcade.Window):
     def __init__(self):
-        self.env = GatheringEnv(size=GRID_WORLD_SIZE,
-                                num_players=NUM_PLAYERS,
-                                food_level=FOOD_TINY,
-                                food_respawn_time=10,
-                                player_murder_mode=True,
-                                player_respawn_time=200,
-                                player_move_cost=0,
-                                food_reward=1,
-                                draw_beam=True)
+
+    # exp1 = experiment_DQN_DQN(env_scarse(), "scarse")
+    # exp2 = experiment_DQN_DQN(
+    #     "scarse_shoot_one_direction")
+    # exp3 = experiment_DQN_DQN(
+    #     env_scarse(small_world=False),  "scarse_big_world")
+    # exp4 = experiment_DQN_DQN(
+    #     env_scarse(player_move_cost=0),  "scarse_no_move_penality")
+    # exp5 = experiment_DQN_DQN(
+    #     env_very_scarse(),  "very_scarse")
+        self.env = env_creator(env_very_scarse())
         self.set_update_rate(1 / 10)
         self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -69,19 +73,17 @@ class Gathering(arcade.Window):
             action = NOTHING
         elif key == arcade.key.ENTER:
             self.env.render("human")
+            return
         elif key == arcade.key.BACKSPACE:
             self.env.render(close=True)
         elif key == arcade.key.SPACE:
             action = SHOOT
-            action2 = SHOOT
         elif key == arcade.key.HOME:
             action2 = SHOOT
         if action is not None:
             try:
                 if NUM_PLAYERS == 2:
                     states, rewards, done, info = self.env.step({"player0":action, "player1":action2})
-                    if action == SHOOT:
-                        self.env.render("human")
                 else:
                     states, rewards, done, info = self.env.step({"player0":action})
             except Exception as e:

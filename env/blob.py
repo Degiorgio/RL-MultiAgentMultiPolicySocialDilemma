@@ -11,9 +11,10 @@ RIGHT = 3
 NOTHING = 4
 
 # murder mode only
-ROTATE_LEFT = 5
-ROTATE_RIGHT = 6
-SHOOT = 7
+SHOOT = 5
+# murder mode and shoot_in_all_directions in false
+ROTATE_LEFT = 6
+ROTATE_RIGHT = 7
 
 # facing directions
 NORTH = 0
@@ -28,9 +29,9 @@ action_string_map = {
     2: "move_left",
     3: "move_right",
     4: "nothing",
-    5: "rotate_left",
-    6: "rotate_right",
-    7: "shoot"
+    5: "shoot",
+    6: "rotate_left",
+    7: "rotate_right"
 }
 
 
@@ -72,7 +73,7 @@ class Blob:
     # (x=SIZE,y=SIZE)=bottom rigth
     # and
     # (x=0, y=0)=top left
-    def action(self, choice, murder_mode, obstructions):
+    def action(self, choice, murder_mode, obstructions, shoot_in_all_directions):
         if not murder_mode:
             if choice == UP:
                 # move up
@@ -94,7 +95,23 @@ class Blob:
                 return False
             else:
                 raise NotImplementedError(f"action {choice} not supported")
-        else:
+        elif shoot_in_all_directions:
+            if choice == UP:
+                return self.move(x=1, y=0, obstructions=obstructions)
+            elif choice == DOWN:
+                return self.move(x=-1, y=0, obstructions=obstructions)
+            elif choice == LEFT:
+                return self.move(x=0, y=-1, obstructions=obstructions)
+            elif choice == RIGHT:
+                return self.move(x=0, y=1, obstructions=obstructions)
+            elif choice == SHOOT:
+                self.beam = True
+                return False
+            elif choice == NOTHING:
+                return False
+            else:
+                raise NotImplementedError(f"action {choice} not supported")
+        else: 
             if choice == UP:
                 # move up
                 return self.move(x=1, y=0, obstructions=obstructions)
@@ -173,53 +190,77 @@ class Blob:
                 f"facing {self.facing_dir} not supported"
             )
 
-    def get_hit_intervals(self):
-        direction = (self.facing_dir) % 4
-        points = []
-        if direction == NORTH:
-            x_points = list(range(1, self.x))
-            y_points = [self.y]*len(x_points)
-        if direction == SOUTH:
-            x_points = list(range(self.x+1, self.size-1))
-            y_points = [self.y]*len(x_points)
-        elif direction == WEST:
-            y_points = list(range(1, self.y))
-            x_points = [self.x]*len(y_points)
-        elif direction == EAST:
-            y_points = list(range(self.y+1, self.size-1))
-            x_points = [self.x]*len(y_points)
+    def get_hit_intervals(self, shoot_in_all_directions):
+        x_points = []
+        y_points = []
+
+        if not shoot_in_all_directions:
+            direction = (self.facing_dir) % 4
+        else:
+            direction = None
+
+        if direction == NORTH or direction is None:
+            x_points += list(range(1, self.x))
+            y_points += [self.y]*len(x_points)
+        if direction == SOUTH or direction is None:
+            x_points += list(range(self.x+1, self.size-1))
+            y_points += [self.y]*len(x_points)
+        if direction == WEST or direction is None:
+            y_points += list(range(1, self.y))
+            x_points += [self.x]*len(y_points)
+        if direction == EAST or direction is None:
+            y_points += list(range(self.y+1, self.size-1))
+            x_points += [self.x]*len(y_points)
         points = list(zip(x_points, y_points))
         return points
 
-    def set_hit(self, array, value):
-        direction = (self.facing_dir) % 4
-        if direction == NORTH:
+    def set_hit(self, array, value, shoot_in_all_directions):
+        if not shoot_in_all_directions:
+            direction = (self.facing_dir) % 4
+            if direction == NORTH:
+                array[1:self.x, self.y] = value
+                return array
+            if direction == SOUTH:
+                array[self.x+1:self.size-1, self.y] = value
+                return array
+            elif direction == WEST:
+                array[self.x, 1:self.y] = value
+                return array
+            elif direction == EAST:
+                array[self.x, self.y+1:self.size-1] = value
+                return array
+        else:
+            direction = None
             array[1:self.x, self.y] = value
-            return array
-        if direction == SOUTH:
             array[self.x+1:self.size-1, self.y] = value
-            return array
-        elif direction == WEST:
             array[self.x, 1:self.y] = value
-            return array
-        elif direction == EAST:
             array[self.x, self.y+1:self.size-1] = value
             return array
 
-    def hit_by(self, other):
-        direction = (other.facing_dir) % 4
+
+    def hit_by(self, other, shoot_in_all_directions):
         hit = False
-        if direction == NORTH:
+        if not shoot_in_all_directions:
+            direction = (other.facing_dir) % 4
+            if direction == NORTH:
+                if other.y == self.y and self.x <= other.x:
+                    hit = True
+            elif direction == SOUTH:
+                if other.y == self.y and self.x >= other.x:
+                    hit = True
+            elif direction == WEST:
+                if other.y >= self.y and self.x == other.x:
+                    hit = True
+            elif direction == EAST:
+                if other.y <= self.y and self.x == other.x:
+                    hit = True
+        else:
             if other.y == self.y and self.x <= other.x:
                 hit = True
-        elif direction == SOUTH:
-            if other.y == self.y and self.x >= other.x:
+            elif other.y == self.y and self.x >= other.x:
                 hit = True
-        elif direction == WEST:
-            if other.y >= self.y and self.x == other.x:
+            elif other.y >= self.y and self.x == other.x:
                 hit = True
-        elif direction == EAST:
-            if other.y <= self.y and self.x == other.x:
+            elif other.y <= self.y and self.x == other.x:
                 hit = True
         return hit
-
