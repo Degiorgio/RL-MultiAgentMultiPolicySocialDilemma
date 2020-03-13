@@ -2,11 +2,11 @@ import multiprocessing as mp
 
 def work(x):
     print(x)
-    from experiments_configs import expr_scrase
+    from experiments_configs import expr_scrase, expr_exp, expr_test
     from configs import get_player_trainers
-    EXPERIMENT_CONFIGS = expr_scrase()
+    EXPERIMENT_CONFIGS = expr_test()
     expr = EXPERIMENT_CONFIGS[x]
-    NUM_EPISODES = 500
+    NUM_EPISODES = 2000
     CHECKPOIINT_INTERVAL = 50
     print("-----------------------------------------")
     print("configs")
@@ -31,8 +31,8 @@ def work(x):
 
 def main():
     processes = []
-    from experiments_configs import expr_scrase
-    EXPERIMENT_CONFIGS = expr_scrase()
+    from experiments_configs import expr_scrase, expr_exp, expr_test
+    EXPERIMENT_CONFIGS = expr_test()
     for i, x in enumerate(EXPERIMENT_CONFIGS):
         p = mp.Process(target=work, args=(i,))
         p.start()

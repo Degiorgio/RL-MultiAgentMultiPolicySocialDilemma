@@ -9,7 +9,7 @@ import numpy as np
 from collections import Counter
 from configs import get_player_trainers, env_creator
 from util import create_dir
-
+import statistics
 
 def _render_video(image_path):
     # TODO
@@ -45,6 +45,8 @@ def _play_game(trainerplayer0,
         dict.fromkeys(action_string_map.keys(), 0)
 
     average_reward = Counter({"player0": 0, "player1": 0})
+    player0_rewards = []
+    player1_rewards = []
     for episode in tqdm(range(episodes)):
         current_state = env.reset()
         step = 0
@@ -84,6 +86,8 @@ def _play_game(trainerplayer0,
                 break
         # print("rewards",  cum_rewards)
         average_reward.update(cum_rewards)
+        player0_rewards.append(cum_rewards['player0'])
+        player1_rewards.append(cum_rewards['player1'])
         if render_video and episode == 0:
             _render_video(os.path.join(experiment_path, "render"))
     print("-----------------------------------------")
@@ -94,9 +98,14 @@ def _play_game(trainerplayer0,
 
     print("action distribution player 0", player0_action_distribution)
     print("action distribution player 1", player1_action_distribution)
+
+    median = {"player0": 0, "player1": 0}
+    median['player0'] = statistics.median(player0_rewards)
+    median['player1'] = statistics.median(player1_rewards)
     average_reward['player0'] = average_reward['player0']/episodes
     average_reward['player1'] = average_reward['player1']/episodes
     print("average reward:", average_reward)
+    print("median reward:", median)
 
     with open(os.path.join(experiment_path, "results_eval.json"), "w") as f:
         results = {
@@ -104,10 +113,11 @@ def _play_game(trainerplayer0,
             "player1_action_distribution": player1_action_distribution,
             "player0_reward": average_reward['player0'],
             "player1_reward": average_reward['player1'],
+            "player0_median": median['player0'],
+            "player1_median": median['player1'],
             "number_of_episodes": episodes
         }
         json.dump(results, f, indent=4)
-
 
 
 def evaluate(experiment_path,
@@ -197,8 +207,8 @@ def evaluate(experiment_path,
 def main(experiment_path, NUM_EPISODES):
     print(f"evaluating {experiment_path}")
     # optional configs
-    player_0_checkpoint_index = -1
-    player_1_checkpoint_index = -1
+    player_0_checkpoint_index = 4
+    player_1_checkpoint_index = 4
     USE_RANDOM_POLICY_FOR_PLAYER_1 = False
     save_images = True
     render_video = True
@@ -212,10 +222,10 @@ def main(experiment_path, NUM_EPISODES):
 
 
 
-folders = glob.glob("out/*/")
+folders = glob.glob("en3/*/")
 processes = []
 for folder in folders:
-    if not os.path.exists(os.path.join(folder, "results_eval.json")):
+    # if not os.path.exists(os.path.join(folder, "results_eval.json")):
         p = Process(target=main, args=(folder, 100))
         p.start()
         processes.append(p)

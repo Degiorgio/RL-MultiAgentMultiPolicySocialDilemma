@@ -8,7 +8,7 @@ def render(x):
     subprocess.check_call(["./generate_video.sh", x])
 
 threads = []
-experiment_path = "out/*/"
+experiment_path = "en3/*/"
 experiments = glob.glob(experiment_path)
 for x in experiments:
     path1 = os.path.join(x, "render")
