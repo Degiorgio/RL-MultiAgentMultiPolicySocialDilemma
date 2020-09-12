@@ -1,17 +1,6 @@
-from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
+from env.configs import env_scarse, env_very_scarse, env_abudent, env_normal
 
-SIZE = 42
-
-    # exp1 = experiment_DQN_PPO(env_scarse(player_move_cost=0), "scarse")
-    # exp2 = experiment_DQN_PPO(env_normal(player_move_cost=0), "normal")
-    # exp3 = experiment_DQN_PPO(
-    #     env_normal(player_move_cost=0, player_respawn_time=2),
-    #     "normal_low_respawn_time")
-    # exp4 = experiment_DQN_PPO(
-    #     env_scarse(player_move_cost=0, player_respawn_time=2),
-    #     "scarse_low_respawn_time")
-
-def expr_scrase():
+def expr_environment():
     exp1 = experiment_DQN_PPO(env_scarse(player_respawn_time=200, food_respawn_time=50),
                               tt=4,
                               env_string="scarse_high_n_f")
@@ -27,10 +16,10 @@ def expr_scrase():
     exp5 = experiment_DQN_PPO(env_scarse(player_respawn_time=2, food_respawn_time=14),
                               tt=4,
                               env_string="scarse_low_n_f")
-    return [exp1, exp2, exp3, exp4, exp5]
+    return [exp1, exp2] #exp3, exp4, exp5]
 
 
-def expr_exp():
+def expr_parameters():
     env = env_scarse(player_respawn_time=50, food_respawn_time=14)
     exp1 = experiment_DQN_PPO(env,
                               env_string="DQN_LOW_REPLAY_BUFF",
@@ -46,175 +35,40 @@ def expr_exp():
                               ppo_critic=False,
                               ppo_gae=False,
                               ppo_batch_mode="complete_episodes")
-    # exp5 = experiment_DQN_PPO(env,
-    #                           env_string="PPO_NO_GAE",
-    #                           ppo_critic=True,
-    #                           ppo_gae=False,
-    #                           ppo_batch_mode="complete_episodes")
     return [exp1, exp2, exp3, exp4]
 
 
-def expr_test():
-    # env = env_scarse(player_respawn_time=50, food_respawn_time=14)
-    # exp1 = experiment_DQN_PPO(env,
-    #                           tt=2,
-    #                           env_string="LOW_BUFF",
-    #                           ppo_batch_mode="complete_episodes",
-    #                           dqn_batch_size=32,
-    #                           ppo_batch_size=32)
-    # exp2 = experiment_DQN_PPO(env,
-    #                           tt=2,
-    #                           env_string="HIGH_BUFF",
-    #                           ppo_batch_mode="complete_episodes",
-    #                           dqn_batch_size=128,
-    #                           ppo_batch_size=128)
-
-    env = env_scarse(player_respawn_time=200, food_respawn_time=14)
-    exp1 = experiment_PPO_PPO(env,
-                              tt=4,
-                              env_string="PPO_LOW_CLIPPING",
-                              ppo_clipping_1=0.01,
-                              ppo_clipping_2=0.7)
-    exp2 = experiment_DQN_DQN(env,
-                              tt=4,
-                              env_string="DQN_buffer",
-                              dqn_buffer_size_1=50,
-                              dqn_buffer_size_2=50_000)
-    return [exp1, exp2]
-
-
-# def expr_exp():
-#     exploration_config_low = {
-#             "type": "EpsilonGreedy",
-#             "initial_epsilon": 1.0,
-#             "final_epsilon": 0.02,
-#             "epsilon_timesteps": 80_000,
-#     }
-#     exploration_config_high = {
-#             "type": "EpsilonGreedy",
-#             "initial_epsilon": 1.0,
-#             "final_epsilon": 0.06,
-#             "epsilon_timesteps": 600_000,
-#     }
-#     env = env_scarse(player_respawn_time=50, food_respawn_time=14)
-#     exp1 = experiment_DQN_PPO(env,
-#                               exploration_config_dqn=exploration_config_low,
-#                               exploration_config_PPO=exploration_config_low,
-#                               env_string="scarse_low_vs_low")
-#     exp2 = experiment_DQN_PPO(env,
-#                               exploration_config_dqn=exploration_config_high,
-#                               exploration_config_PPO=exploration_config_high,
-#                               env_string="scarse_high_vs_high")
-#     exp3 = experiment_DQN_PPO(env,
-#                               exploration_config_dqn=exploration_config_high,
-#                               exploration_config_PPO=exploration_config_low,
-#                               env_string="scarse_dqn_high_vs_ppo_low")
-#     exp4 = experiment_DQN_PPO(env,
-#                               exploration_config_dqn=exploration_config_low,
-#                               exploration_config_PPO=exploration_config_high,
-#                               env_string="scarse_dqn_low_vs_ppo_high")
-#     return [exp1, exp2, exp3, exp4]
-
-
-def env_scarse(murder_mode=True,
-               steps_per_episode=1000,
-               beam_color_diff=True,
-               draw_beam=True,
-               draw_shooting_direction=True,
-               shoot_in_all_directions=True,
-               food_respawn_time=14,
-               small_world=True,
-               player_move_cost=0,
-               player_respawn_time=200):
-    return {
-        "size": SIZE,
-        "num_players": 2,
-        "murder_mode": murder_mode,
-        "steps_per_episode": steps_per_episode,
-        "player_move_cost": player_move_cost,
-        "player_respawn_time": player_respawn_time,
-        "food_reward": 50,
-        "food_respawn_time": food_respawn_time,
-        "food_level": FOOD_LITTLE,
-        "beam_color_diff": beam_color_diff,
-        "draw_beam": draw_beam,
-        "draw_shooting_direction": draw_shooting_direction,
-        "shoot_in_all_directions": shoot_in_all_directions,
-        "small_world":  small_world
+def expr_exploration_vs_exploitation():
+    exploration_config_low = {
+            "type": "EpsilonGreedy",
+            "initial_epsilon": 1.0,
+            "final_epsilon": 0.02,
+            "epsilon_timesteps": 80_000,
     }
-
-
-def env_very_scarse(murder_mode=True, steps_per_episode=1000, beam_color_diff=True, draw_beam=True, draw_shooting_direction=True, shoot_in_all_directions=True, small_world=True):
-    return {
-            "size": SIZE,
-            "num_players": 2,
-            "murder_mode": murder_mode,
-            "steps_per_episode": steps_per_episode,
-            "player_move_cost": 0,
-            "player_respawn_time": 200,
-            "food_reward": 50,
-            "food_respawn_time": 5,
-            "food_level": FOOD_TINY,
-            "beam_color_diff": beam_color_diff,
-            "draw_beam": draw_beam,
-            "draw_shooting_direction": draw_shooting_direction,
-            "shoot_in_all_directions": shoot_in_all_directions,
-            "small_world":  small_world
+    exploration_config_high = {
+            "type": "EpsilonGreedy",
+            "initial_epsilon": 1.0,
+            "final_epsilon": 0.06,
+            "epsilon_timesteps": 600_000,
     }
-
-
-def env_abudent(food_respawn_time,
-                player_respawn_time,
-                murder_mode=True,
-                steps_per_episode=1000,
-                beam_color_diff=True,
-                draw_beam=True,
-                draw_shooting_direction=True,
-                shoot_in_all_directions=True,
-                small_world=True):
-    return {
-            "size": SIZE,
-            "num_players": 2,
-            "murder_mode": murder_mode,
-            "steps_per_episode": steps_per_episode,
-            "player_move_cost": 0,
-            "player_respawn_time": player_respawn_time,
-            "food_reward": 50,
-            "food_respawn_time": food_respawn_time,
-            "food_level": FOOD_ALOT,
-            "beam_color_diff": beam_color_diff,
-            "draw_beam": draw_beam,
-            "draw_shooting_direction": draw_shooting_direction,
-            "shoot_in_all_directions": shoot_in_all_directions,
-            "small_world":  small_world
-    }
-
-
-def env_normal(murder_mode=True,
-               steps_per_episode=1000,
-               beam_color_diff=True,
-               draw_beam=True,
-               draw_shooting_direction=True,
-               shoot_in_all_directions=True,
-               small_world=True,
-               player_move_cost=0,
-               player_respawn_time=200):
-    return {
-            "size": SIZE,
-            "num_players": 2,
-            "murder_mode": murder_mode,
-            "steps_per_episode": steps_per_episode,
-            "player_move_cost": player_move_cost,
-            "player_respawn_time": player_respawn_time,
-            "food_reward": 50,
-            "food_respawn_time": 40,
-            "food_level": FOOD_NORMAL,
-            "beam_color_diff": beam_color_diff,
-            "draw_beam": draw_beam,
-            "draw_shooting_direction": draw_shooting_direction,
-            "shoot_in_all_directions": shoot_in_all_directions,
-            "small_world":  small_world
-    }
+    env = env_scarse(player_respawn_time=50, food_respawn_time=14)
+    exp1 = experiment_DQN_PPO(env,
+                              exploration_config_dqn=exploration_config_low,
+                              exploration_config_PPO=exploration_config_low,
+                              env_string="scarse_low_vs_low")
+    exp2 = experiment_DQN_PPO(env,
+                              exploration_config_dqn=exploration_config_high,
+                              exploration_config_PPO=exploration_config_high,
+                              env_string="scarse_high_vs_high")
+    exp3 = experiment_DQN_PPO(env,
+                              exploration_config_dqn=exploration_config_high,
+                              exploration_config_PPO=exploration_config_low,
+                              env_string="scarse_dqn_high_vs_ppo_low")
+    exp4 = experiment_DQN_PPO(env,
+                              exploration_config_dqn=exploration_config_low,
+                              exploration_config_PPO=exploration_config_high,
+                              env_string="scarse_dqn_low_vs_ppo_high")
+    return [exp1, exp2, exp3, exp4]
 
 
 def experiment_DQN_DQN(envq, env_string, tt=4,

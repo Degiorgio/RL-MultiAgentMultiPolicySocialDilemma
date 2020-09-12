@@ -3,9 +3,11 @@ import os
 import glob
 import threading
 
+
 def render(x):
-    print("rendreing", x)
+    print("rendering", x)
     subprocess.check_call(["./generate_video.sh", x])
+
 
 threads = []
 experiment_path = "en3/*/"

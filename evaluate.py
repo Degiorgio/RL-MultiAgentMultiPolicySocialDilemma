@@ -1,19 +1,26 @@
-from multiprocessing import Process
-import multiprocessing as mp
-import sys
+
 import os
+import sys
 import json
 import glob
-from tqdm import tqdm
-import numpy as np
-from collections import Counter
-from configs import get_player_trainers, env_creator
-from util import create_dir
 import statistics
+import numpy as np
+
+from collections import Counter
+from agents import get_player_trainers
+from env.factory import env_factory
+from util import create_dir
+
+from tqdm import tqdm
+
+from multiprocessing import Process
+import multiprocessing as mp
+
 
 def _render_video(image_path):
     # TODO
     return
+
 
 def _save_image(step, img, experiment_path):
     img_path = os.path.join(experiment_path, "render")
@@ -181,7 +188,7 @@ def evaluate(experiment_path,
     trainer1.restore(model_path_player1)
 
     steps_per_episode = env_config["steps_per_episode"]
-    env = env_creator(env_config=env_config)
+    env = env_factory(env_config=env_config)
 
     if USE_RANDOM_POLICY_FOR_PLAYER_1:
         print("using random policy for player 1")
@@ -221,16 +228,16 @@ def main(experiment_path, NUM_EPISODES):
              render_video)
 
 
+if __name__ == "__main__":
+    folders = glob.glob("out/*/")
+    processes = []
+    for folder in folders:
+        if not os.path.exists(os.path.join(folder, "results_eval.json")):
+            p = Process(target=main, args=(folder, 100))
+            p.start()
+            processes.append(p)
 
-folders = glob.glob("en3/*/")
-processes = []
-for folder in folders:
-    # if not os.path.exists(os.path.join(folder, "results_eval.json")):
-        p = Process(target=main, args=(folder, 100))
-        p.start()
-        processes.append(p)
-
-mp.set_start_method('spawn')
-for x in processes:
-    x.join()
+    mp.set_start_method('spawn')
+    for x in processes:
+        x.join()
 

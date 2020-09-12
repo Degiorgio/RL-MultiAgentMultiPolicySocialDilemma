@@ -1,4 +1,7 @@
+import os
 import time
+import shutil
+import logging
 
 
 class MyTimer():
@@ -39,9 +42,8 @@ def __thread_log(param):
         print("logging issue")
         pass
 
+
 def create_dir(directory, clean=False):
-    import os
-    import shutil
     if not os.path.exists(directory):
         os.makedirs(directory)
     elif clean:
@@ -50,7 +52,6 @@ def create_dir(directory, clean=False):
 
 
 def setup_log(log_path):
-    import logging
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M',
@@ -61,10 +62,9 @@ def setup_log(log_path):
 
 def get_stats_file(path):
     file = open(path, "w")
-    file.write(f"episode,avg_reward,min_reward,max_reward,epsilon\n")
+    file.write("episode,avg_reward,min_reward,max_reward,epsilon\n")
     return file
 
 
 def get_run_id():
-    import time
     return "%s" % (time.strftime("%Y-%m-%d-%H-%M-%S"))

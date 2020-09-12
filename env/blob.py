@@ -10,9 +10,11 @@ LEFT = 2
 RIGHT = 3
 NOTHING = 4
 
-# murder mode only
+# this action is only valid with murder mode enabled
 SHOOT = 5
-# murder mode and shoot_in_all_directions in false
+
+# the followings actions are only valid with murder mode enabled and
+# SHOOT_IN_ALL_DIRECTIONS set to false
 ROTATE_LEFT = 6
 ROTATE_RIGHT = 7
 
@@ -21,7 +23,6 @@ NORTH = 0
 EAST = 1
 SOUTH = 2
 WEST = 3
-
 
 action_string_map = {
     0: "move_up",
@@ -69,10 +70,10 @@ class Blob:
         self.y = np.random.randint(1, self.size-1)
         self.facing_dir = np.random.randint(0, 4)
 
-    # COORDINATES ARE IMAGE BASED. I.e:
-    # (x=SIZE,y=SIZE)=bottom rigth
+    # COORDINATES ARE IMAGE BASED. I.E:
+    # (x=SIZE,y=SIZE) = bottom right
     # and
-    # (x=0, y=0)=top left
+    # (x=0, y=0) = top left
     def action(self, choice, murder_mode, obstructions, shoot_in_all_directions):
         if not murder_mode:
             if choice == UP:
@@ -111,7 +112,7 @@ class Blob:
                 return False
             else:
                 raise NotImplementedError(f"action {choice} not supported")
-        else: 
+        else:
             if choice == UP:
                 # move up
                 return self.move(x=1, y=0, obstructions=obstructions)
@@ -236,7 +237,6 @@ class Blob:
             array[self.x, 1:self.y] = value
             array[self.x, self.y+1:self.size-1] = value
             return array
-
 
     def hit_by(self, other, shoot_in_all_directions):
         hit = False

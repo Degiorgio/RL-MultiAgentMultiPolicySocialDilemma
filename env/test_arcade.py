@@ -1,37 +1,25 @@
 import arcade
-from env.gridworld import GatheringEnv
 
-# actions
 from env.blob import UP, DOWN, LEFT, RIGHT, NOTHING
 from env.blob import ROTATE_LEFT, ROTATE_RIGHT, SHOOT
-
+from env.gridworld import GatheringEnv
 from env.gridworld import FOOD_TINY, FOOD_LITTLE, FOOD_NORMAL, FOOD_ALOT
-from configs import env_creator
-from experiments_configs import env_scarse, env_very_scarse, env_abudent, env_normal
+from env.factory import env_factory
+from env.configs import env_scarse, env_very_scarse, env_abudent, env_normal
 
 GRID_WORLD_SIZE = 20
+NUM_PLAYERS = 2
+
+MARGIN = 1
 WIDTH = GRID_WORLD_SIZE
 HEIGHT = GRID_WORLD_SIZE
-MARGIN = 1
 SCREEN_WIDTH = (WIDTH + MARGIN) * GRID_WORLD_SIZE + MARGIN
 SCREEN_HEIGHT = (HEIGHT + MARGIN) * GRID_WORLD_SIZE + MARGIN
-
-NUM_PLAYERS = 2
 
 
 class Gathering(arcade.Window):
     def __init__(self):
-
-    # exp1 = experiment_DQN_DQN(env_scarse(), "scarse")
-    # exp2 = experiment_DQN_DQN(
-    #     "scarse_shoot_one_direction")
-    # exp3 = experiment_DQN_DQN(
-    #     env_scarse(small_world=False),  "scarse_big_world")
-    # exp4 = experiment_DQN_DQN(
-    #     env_scarse(player_move_cost=0),  "scarse_no_move_penality")
-    # exp5 = experiment_DQN_DQN(
-    #     env_very_scarse(),  "very_scarse")
-        self.env = env_creator(env_very_scarse())
+        self.env = env_factory(env_very_scarse())
         self.set_update_rate(1 / 10)
         self.acted = None
         super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT)

@@ -1,16 +1,17 @@
 import os
+import json
+
 import ray
 import ray.rllib
 from ray.tune.registry import register_env
 from ray.tune.logger import UnifiedLogger
-
 from ray.rllib.agents.dqn.dqn import DQNTrainer
-from ray.rllib.agents.dqn.dqn_policy import DQNTFPolicy
-
+from ray.rllib.agents.dqn import DQNTFPolicy
 from ray.rllib.agents.ppo.ppo import PPOTrainer
 from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
 
 from util import create_dir
+from env.factory import env_factory
 
 DEFAULT_RESULTS_DIR = "out"
 
@@ -33,14 +34,6 @@ def _get_trainer_constructor(pol):
         raise Exception("not supported")
 
 
-def env_creator(env_config):
-    from env.gridworld import GatheringEnv
-    if "randomized_food" not in env_config:
-        env_config["randomized_food"] = False
-    env = GatheringEnv(**env_config)
-    return env
-
-
 def get_player_trainers(evaluate, experiment_configs):
     def policy_mapping_fn(agent_id):
         if agent_id == "player0":
@@ -51,7 +44,7 @@ def get_player_trainers(evaluate, experiment_configs):
             raise Exception("invalid id")
 
     def get_agent_policies(env_config, agent0_alg, agent1_alg):
-        single_env = env_creator(env_config)
+        single_env = env_factory(env_config)
         obs_space = single_env.observation_space
         act_space = single_env.action_space
         print(single_env.action_space)
@@ -62,12 +55,11 @@ def get_player_trainers(evaluate, experiment_configs):
         return policies, policy_mapping_fn
 
     ray.init()
-    register_env("gathering", env_creator)
+    register_env("gathering", env_factory)
 
     EXPERIMENT_PATH = os.path.join(DEFAULT_RESULTS_DIR, experiment_configs['rid'])
     if not evaluate:
         create_dir(EXPERIMENT_PATH, clean=True)
-        import json
         with open(os.path.join(EXPERIMENT_PATH, "experiment.json"), 'w') as fp:
             json.dump(experiment_configs, fp, indent=4)
 

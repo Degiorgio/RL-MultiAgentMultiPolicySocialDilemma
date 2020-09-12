@@ -1,9 +1,13 @@
 import numpy as np
+
 import cv2
 from PIL import Image
-from env.blob import Blob, Point
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from gym.spaces import Discrete, Box
+
+from env.blob import Blob, Point
+
+# AMOUNT of food on the grid word
 
 FOOD_TINY = 1
 FOOD_LITTLE = 2
@@ -16,6 +20,7 @@ foot_level_string_map = {
     4: "normal",
     7: "alot"
 }
+
 
 class Apple(Blob):
     def __init__(self, size, x=None, y=None):
@@ -341,9 +346,8 @@ class GatheringEnv(MultiAgentEnv):
                 env[player.x][player.y] = player.color
 
         if self.small_world:
-            env = np.pad(env, pad_width=((11,11,), (11,11,), (0,0,)),
+            env = np.pad(env, pad_width=((11, 11,), (11, 11,), (0, 0,)),
                          mode='constant', constant_values=0)
 
-        # reading to rgb. Apparently. Even tho color definitions are bgr. ???
         img = Image.fromarray(env, 'RGB')
         return img
