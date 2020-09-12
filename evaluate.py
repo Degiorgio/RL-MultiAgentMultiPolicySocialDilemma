@@ -214,8 +214,8 @@ def evaluate(experiment_path,
 def main(experiment_path, NUM_EPISODES):
     print(f"evaluating {experiment_path}")
     # optional configs
-    player_0_checkpoint_index = 4
-    player_1_checkpoint_index = 4
+    player_0_checkpoint_index = 1
+    player_1_checkpoint_index = 1
     USE_RANDOM_POLICY_FOR_PLAYER_1 = False
     save_images = True
     render_video = True
