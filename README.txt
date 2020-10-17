@@ -24,5 +24,5 @@ TODO
 =====
 
 0.  Code needs clean-up, especially type-hints.
-1.  Configurations are currently hard coded, create an approbate interface
+1.  Configurations are currently hard coded, create the appropriate interface
 2.  Currently only DQN and PPO is implemented, use different RL algorithms.
